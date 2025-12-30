@@ -10,6 +10,7 @@ specific to the Arma 3 game.
    :caption: Core
 
    binary
+   compression
 
 Indices and tables
 ==================
