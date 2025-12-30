@@ -7,6 +7,7 @@ specific to the Arma 3 game.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Core
 
    binary
 
