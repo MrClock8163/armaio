@@ -37,6 +37,19 @@ keywords = ["arma3", "bi", "p3d", "rtm", "paa"]
 Repository = "https://github.com/MrClock8163/armaio"
 Issues = "https://github.com/MrClock8163/armaio/issues"
 
+[dependency-groups]
+testing = [
+    "pytest ~= 9.0.0"
+]
+linting = [
+    {include-group = "testing"},
+    "mypy >= 1.17.1",
+    "flake8 >= 7.3.0"
+]
+development = [
+    {include-group = "linting"}
+]
+
 [tool.hatch.version]
 source = "vcs"
 fallback-version = "0.0.0"
