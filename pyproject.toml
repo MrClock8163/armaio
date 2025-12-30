@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+dynamic = ["version"]
+name = "armaio"
+authors = [
+    {name="MrClock", email="mrclock8163@gmail.com"},
+]
+description = "IO modules for handling Arma 3 file formats."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed"
+]
+license = "GPL-3.0"
+license-files = ["LICEN[CS]E*"]
+keywords = ["arma3", "bi", "p3d", "rtm", "paa"]
+
+[project.urls]
+Repository = "https://github.com/MrClock8163/armaio"
+Issues = "https://github.com/MrClock8163/armaio/issues"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/armaio/_version.py"
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "-v", "--color=yes"]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
