@@ -395,14 +395,14 @@ _T = TypeVar("_T", bound=PaaTagg)
 
 class PaaFile():
     def __init__(self) -> None:
-        self._source: str = ""
+        self._source: str | None = None
         self._format: PaaFormat = PaaFormat.DXT1
         self._taggs: tuple[PaaTagg, ...] = ()
         self._mips: tuple[PaaMipmap, ...] = ()
         self._alpha: bool = False
 
     @property
-    def source(self) -> str:
+    def source(self) -> str | None:
         return self._source
 
     @property
