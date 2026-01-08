@@ -10,6 +10,13 @@ PAA codec for Pillow
     package. It must be installed in the environment, otherwise a
     :py:class:`ModuleNotFoundError` exception will be thrown.
 
+    Install the package manually, or install **ArmaIO** with the ``codec``
+    extra:
+
+    .. code-block:: shell
+
+        pip install armaio[codec]
+
 The `Pillow <https://pillow.readthedocs.io>`_ package is a widely used image
 manipulation library for Python. It provides support for a wide range of
 image formats out of the box. It also comes with a plugin system that can be
