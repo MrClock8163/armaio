@@ -24,7 +24,7 @@ class PaaImageFile(ImageFile.ImageFile):
         assert self.fp is not None
 
         paa = PaaFile.read(self.fp)
-        mip = paa.mips[0]
+        mip = paa.mipmaps[0]
         alpha = paa.is_alpha()
         self._size = (mip.width, mip.height)
         self._mode = "RGBA" if alpha else "RGB"
@@ -49,7 +49,7 @@ class PaaDxtDecoder(ImageFile.PyDecoder):
         paa: PaaFile
         alpha: bool
         paa, alpha = self.args
-        mip = paa.mips[0]
+        mip = paa.mipmaps[0]
         channels: tuple[MutableSequence[float], ...] = mip.decompress(
             paa.format
         )

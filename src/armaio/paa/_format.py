@@ -414,7 +414,7 @@ class PaaFile():
         return self._taggs
 
     @property
-    def mips(self) -> tuple[PaaMipmap, ...]:
+    def mipmaps(self) -> tuple[PaaMipmap, ...]:
         return self._mips
 
     def is_alpha(self) -> bool:
