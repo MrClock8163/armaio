@@ -86,7 +86,10 @@ def register_paa_codec() -> None:
         _accept
     )
 
-    Image.register_extension(
+    Image.register_extensions(
         PaaImageFile.format,
-        ".paa"
+        [
+            ".paa",
+            ".pac"  # for legacy compatibility
+        ]
     )
