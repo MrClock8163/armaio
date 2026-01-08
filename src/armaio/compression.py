@@ -178,8 +178,7 @@ def dxt5_decompress(
     """
     Decompresses texture data compressed with the S3TC DXT5/BC3 algorithm.
 
-    The data is returned in bottom-to-top row order, conforming to the
-    OpenGL conventions.
+    The data is returned in top-to-bottom row order.
 
     :param stream: Source binary stream
     :type stream: IO[bytes]
@@ -324,12 +323,12 @@ def dxt5_decompress(
             # Block interpretation
 
             # index of the starting row of the block
-            bstartrow = height - brow * 4
+            bstartrow = brow * 4
             # index of the starting column of the block
             bstartcol = bcol * 4
             for row in range(4):
                 # flattened index of the first pixel in the row
-                current_row_col = (bstartrow - row - 1) * width + bstartcol
+                current_row_col = (bstartrow + row) * width + bstartcol
                 for col in range(4):
                     # pixel index inside current flattened block
                     pix = row * 4 + col
@@ -358,8 +357,7 @@ def dxt1_decompress(
     """
     Decompresses texture data compressed with the S3TC DXT1/BC1 algorithm.
 
-    The data is returned in bottom-to-top row order, conforming to the
-    OpenGL conventions.
+    The data is returned in top-to-bottom row order.
 
     :param stream: Source binary stream
     :type stream: IO[bytes]
@@ -450,12 +448,12 @@ def dxt1_decompress(
 
             # Block interpretation
             # index of the starting row of the block
-            bstartrow = height - brow * 4
+            bstartrow = brow * 4
             # index of the starting column of the block
             bstartcol = bcol * 4
             for row in range(4):
                 # flattened index of the first pixel in the row
-                current_row_col = (bstartrow - row - 1) * width + bstartcol
+                current_row_col = (bstartrow + row) * width + bstartcol
                 for col in range(4):
                     r, g, b, a = lut[codes[row * 4 + col]]
                     # flattened intdex of the current pixel
