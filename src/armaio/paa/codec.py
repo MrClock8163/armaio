@@ -1,3 +1,6 @@
+"""
+PAA coded plugin definitions for the Pillow library.
+"""
 from collections.abc import MutableSequence
 
 from PIL import Image, ImageFile
@@ -17,6 +20,9 @@ def _accept(magic: bytes) -> bool:
 
 
 class PaaImageFile(ImageFile.ImageFile):
+    """
+    Arma 3 PAA format handler.
+    """
     format = "PAA"
     format_description = "Arma 3 PAA texture"
 
@@ -40,12 +46,27 @@ class PaaImageFile(ImageFile.ImageFile):
 
 
 class PaaDxtDecoder(ImageFile.PyDecoder):
+    """
+    Decoder for DXT1 and DXT5 compressed Arma 3 PAA texture files.
+    """
     _pulls_fd = True
 
     def decode(
         self,
         buffer: bytes | Image.SupportsArrayInterface
     ) -> tuple[int, int]:
+        """
+        Decodes the previously read data of a DXT compressed PAA texture file.
+
+        The method expects that the read :py:class:`~armaio.paa.PaaFile`, and
+        a boolean indicating the presence of alpha data was passed as
+        arguments to the instance.
+
+        :param buffer: Binary file to be read (UNUSED)
+        :type buffer: bytes | Image.SupportsArrayInterface
+        :return: Bytes consumed/reading finished and error code
+        :rtype: tuple[int, int]
+        """
         paa: PaaFile
         alpha: bool
         paa, alpha = self.args
@@ -78,6 +99,16 @@ class PaaDxtDecoder(ImageFile.PyDecoder):
 
 
 def register_paa_codec() -> None:
+    """
+    Registers PAA codecs for the Pillow package.
+
+    Extensions:
+    - ``.paa``
+    - ``.pac``
+
+    Decoders:
+    - ``PAADXT``: DXT1 or DXT5 compressed PAA
+    """
     Image.register_decoder("PAADXT", PaaDxtDecoder)
 
     Image.register_open(

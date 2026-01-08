@@ -1,3 +1,11 @@
+"""
+Definitions for reading PAA textures files. File writing is currently not
+supported.
+
+The provided classes and functions can read the structure of DXT1 and DXT5
+compressed PAA texture files.
+"""
+
 from ._format import (  # noqa: F401
     PaaError as PaaError,
     PaaFormat as PaaFormat,
