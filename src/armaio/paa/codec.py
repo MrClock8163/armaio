@@ -103,10 +103,12 @@ def register_paa_codec() -> None:
     Registers PAA codecs for the Pillow package.
 
     Extensions:
+
     - ``.paa``
     - ``.pac``
 
     Decoders:
+
     - ``PAADXT``: DXT1 or DXT5 compressed PAA
     """
     Image.register_decoder("PAADXT", PaaDxtDecoder)

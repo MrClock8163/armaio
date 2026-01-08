@@ -4,7 +4,8 @@
 PAA format
 ==========
 
-The :py:mod:`armaio.paa` provides facilities for reading the PAA texture format.
+The :py:mod:`armaio.paa` package provides facilities for reading the PAA
+texture format.
 
 Examples
 --------
