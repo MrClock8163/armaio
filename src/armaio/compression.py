@@ -8,7 +8,7 @@ from collections.abc import MutableSequence
 
 
 class LzoError(Exception):
-    """Expection raised upon LZO decompression errors."""
+    """Exception raised upon LZO decompression errors."""
 
     def __str__(self) -> str:
         return f"LZO - {super().__str__()}"
