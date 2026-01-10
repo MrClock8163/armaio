@@ -158,6 +158,86 @@ def lzo1x_decompress(
     return stream.tell() - start, output
 
 
+class LzssError(Exception):
+    """Exception raised upon LZSS decompression errors."""
+
+    def __str__(self) -> str:
+        return f"LZSS - {super().__str__()}"
+
+
+def lzss_decompress(
+    stream: IO[bytes],
+    expected_length: int,
+    *,
+    signed_checksum: bool = False
+) -> tuple[int, bytearray]:
+    """
+    Decompress data compressed with the LZSS algorithm.
+
+    :param stream: Source binary stream
+    :type stream: IO[bytes]
+    :param expected_length: Expected decompressed length
+    :type expected_length: int
+    :param signed_checksum: Use signed checksum instead of unsigned, defaults
+        to False
+    :type signed_checksum: bool, optional
+    :raises LzssError: Could not decompress data due to an error
+    :return: Number of consumed bytes and the decompressed data
+    :rtype: tuple[int, bytearray]
+    """
+    start = stream.tell()
+    output = bytearray()
+
+    def read_pointer() -> tuple[int, int]:
+        offset, length = stream.read(2)
+        offset += (length & 0xf0) << 4
+        length = (length & 0x0f) + 3  # minimum length is 3
+
+        return offset, length
+
+    while len(output) < expected_length:
+        flag = stream.read(1)[0]
+        for bit in range(8):
+            if len(output) >= expected_length:
+                break
+
+            if flag & 2**bit:
+                output.extend(stream.read(1))
+                continue
+
+            offset, length = read_pointer()
+            start = len(output) - offset
+            # filler 0x20 when start is before the buffer beginning
+            output.extend(-start * b"\x20")
+            # copy as many whole chunks as possible
+            output.extend(output[start:] * (length // offset))
+            # copy remainder
+            output.extend(output[start:(start + (length % offset))])
+
+    if signed_checksum:
+        checksum_read: int = struct.unpack("<i", stream.read(4))[0]
+        checksum_unpacked = sum(
+            map(
+                lambda x: x - (x >> 7 << 8),  # signed sum
+                output
+            )
+        )
+        # just to be sure
+        checksum_unpacked &= 0xffffffff
+        checksum_unpacked -= (checksum_unpacked >> 31 << 32)
+    else:
+        checksum_read = struct.unpack("<I", stream.read(4))[0]
+        checksum_unpacked = sum(output) & 0xffffffff
+
+    if checksum_unpacked != checksum_read:
+        raise LzssError(
+            f"Checksum mismatch: read {checksum_read:d}, "
+            f"calculated {checksum_unpacked:d}"
+        )
+
+    return stream.tell() - start, output
+
+
 class DxtError(Exception):
     """Expection raised upon DXT decompression errors."""
 
