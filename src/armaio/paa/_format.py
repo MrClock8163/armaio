@@ -245,10 +245,10 @@ class PaaAverageColorTagg(PaaTagg):
         data = binary.read_ulong(stream)
 
         return cls(
-            (data >> 1) & 255,
-            (data >> 2) & 255,
-            data >> 3,
-            data & 255
+            (data >> 16) & 255,
+            (data >> 8) & 255,
+            data & 255,
+            data >> 24
         )
 
 
@@ -349,10 +349,10 @@ class PaaMaxColorTagg(PaaTagg):
         data = binary.read_ulong(stream)
 
         return cls(
-            (data >> 1) & 255,
-            (data >> 2) & 255,
-            data >> 3,
-            data & 255
+            (data >> 16) & 255,
+            (data >> 8) & 255,
+            data & 255,
+            data >> 24
         )
 
 
