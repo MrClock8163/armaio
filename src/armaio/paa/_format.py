@@ -6,20 +6,22 @@
 
 import struct
 from enum import IntEnum
-from io import BytesIO
-from collections.abc import MutableSequence, Buffer
-from copy import deepcopy
 from typing import Self, TypeVar, IO
 from abc import ABC, abstractmethod
 from math import floor
-from array import array
 
 from .. import binary
 from ..compression import (
-    dxt1_decompress,
-    dxt5_decompress,
     lzo1x_decompress,
     lzss_decompress
+)
+from ._encoding import (
+    decode_rgba8888,
+    decode_rgba5551,
+    decode_rgba4444,
+    decode_ia88,
+    decode_dxt1,
+    decode_dxt5
 )
 
 
@@ -649,177 +651,49 @@ class PaaMipmap():
 
         return output
 
-    def _decompress_rgba8888(
-        self
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        stream_lzss = BytesIO(self._raw)
-        expected = self.width * self.height * 4
-        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
-
-        red = array('f', bytearray(self.width * self.height) * 4)
-        green = array('f', bytearray(self.width * self.height) * 4)
-        blue = array('f', bytearray(self.width * self.height) * 4)
-        alpha = array('f', bytearray(self.width * self.height) * 4)
-
-        for i in range(self.width * self.height):
-            alpha[i] = data[i * 4 + 3] / 255
-            red[i] = data[i * 4 + 2] / 255
-            green[i] = data[i * 4 + 1] / 255
-            blue[i] = data[i * 4] / 255
-
-        return red, green, blue, alpha
-
-    def _decompress_rgba5551(
-        self
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        stream_lzss = BytesIO(self._raw)
-        expected = self.width * self.height * 2
-        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
-
-        red = array('f', bytearray(self.width * self.height) * 4)
-        green = array('f', bytearray(self.width * self.height) * 4)
-        blue = array('f', bytearray(self.width * self.height) * 4)
-        alpha = array('f', bytearray(self.width * self.height) * 4)
-
-        for i in range(self.width * self.height):
-            argb = data[i * 2] + (data[i * 2 + 1] << 8)
-
-            alpha[i] = (argb >> 15)
-            red[i] = (argb >> 10 & 0b11111) / 0b11111
-            green[i] = (argb >> 5 & 0b11111) / 0b11111
-            blue[i] = (argb & 0b11111) / 0b11111
-
-        return red, green, blue, alpha
-
-    def _decompress_rgba4444(
-        self
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        stream_lzss = BytesIO(self._raw)
-        expected = self.width * self.height * 2
-        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
-
-        red = array('f', bytearray(self.width * self.height) * 4)
-        green = array('f', bytearray(self.width * self.height) * 4)
-        blue = array('f', bytearray(self.width * self.height) * 4)
-        alpha = array('f', bytearray(self.width * self.height) * 4)
-
-        for i in range(self.width * self.height):
-            gb = data[i * 2]
-            ar = data[i * 2 + 1]
-
-            alpha[i] = (ar >> 4) / 0b1111
-            red[i] = (ar & 0b1111) / 0b1111
-            green[i] = (gb >> 4) / 0b1111
-            blue[i] = (gb & 0b1111) / 0b1111
-
-        return red, green, blue, alpha
-
-    def _decompress_ia88(
-        self
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        stream_lzss = BytesIO(self._raw)
-        expected = self.width * self.height * 2
-        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
-
-        red = array('f', bytearray(self.width * self.height) * 4)
-        green = array('f', bytearray(self.width * self.height) * 4)
-        blue = array('f', bytearray(self.width * self.height) * 4)
-        alpha = array('f', bytearray(self.width * self.height) * 4)
-
-        for i in range(self.width * self.height):
-            gray = data[i * 2] / 255
-            opacity = data[i * 2 + 1] / 255
-
-            alpha[i] = opacity
-            red[i] = gray
-            green[i] = gray
-            blue[i] = gray
-
-        return red, green, blue, alpha
-
-    def _decompress_dxt(
-        self,
-        binary_alpha: bool = True
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        if binary_alpha:
-            decompressor = dxt1_decompress
-            lzo_expected = self._width * self._height // 2
-        else:
-            decompressor = dxt5_decompress
-            lzo_expected = self._width * self._height
-
-        data: Buffer = self._raw
-        if self._lzo_compressed:
-            stream_lzo = BytesIO(data)
-            _, data = lzo1x_decompress(stream_lzo, lzo_expected)
-
-        stream_dxt = BytesIO(data)
-        return decompressor(
-            stream_dxt,
-            self._width,
-            self._height
-        )
-
-    def decompress(
+    def decode(
         self,
         format: PaaFormat
-    ) -> tuple[
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float],
-        MutableSequence[float]
-    ]:
-        """
-        Decompresses the raw mipmap pixel data according to a provided
-        format.
+    ) -> bytes:
+        data: bytes = self._raw
+        match format:
+            case (
+                PaaFormat.DXT1
+                | PaaFormat.DXT5
+            ) if self._lzo_compressed:
+                lzo_expected = (
+                    (self._width * self._height // 2)
+                    if format is PaaFormat.DXT1
+                    else (self._width * self._height)
+                )
+                _, data = lzo1x_decompress(data, lzo_expected)
 
-        Additional internal conditional and unconditional compression is also
-        handled.
+            case (
+                PaaFormat.RGBA8888
+                | PaaFormat.RGBA5551
+                | PaaFormat.RGBA4444
+                | PaaFormat.GRAY
+            ):
+                expected = self.width * self.height * 2
+                _, data = lzss_decompress(
+                    data,
+                    expected,
+                    signed_checksum=True
+                )
 
-        :param format: Data format
-        :type format: PaaFormat
-        :raises PaaError: Unsupported PAA format
-        :return: Decompressed RGBA channel data
-        :rtype: tuple[MutableSequence[float], ...]
-        """
         match format:
             case PaaFormat.DXT1:
-                return self._decompress_dxt(True)
+                return decode_dxt1(self.width, self.height, data)
             case PaaFormat.DXT5:
-                return self._decompress_dxt(False)
+                return decode_dxt5(self.width, self.height, data)
             case PaaFormat.RGBA8888:
-                return self._decompress_rgba8888()
+                return decode_rgba8888(self.width, self.height, data)
             case PaaFormat.RGBA5551:
-                return self._decompress_rgba5551()
+                return decode_rgba5551(self.width, self.height, data)
             case PaaFormat.RGBA4444:
-                return self._decompress_rgba4444()
+                return decode_rgba4444(self.width, self.height, data)
             case PaaFormat.GRAY:
-                return self._decompress_ia88()
+                return decode_ia88(self.width, self.height, data)
 
         raise PaaError(
             f"Unsupported format: {format.name}"
@@ -981,49 +855,49 @@ class PaaFile():
 
 
 def reverse_row_order(
-    data: MutableSequence[float],
     width: int,
-    height: int
-) -> MutableSequence[float]:
+    height: int,
+    data: bytes | bytearray,
+) -> bytes:
     """
-    Reverses the row order in a flattened array of pixel data.
+    Reverses the row order in decoded RGBA data.
 
-    :param data: Row flattened pixel data array
-    :type data: MutableSequence[float]
     :param width: Texture width in pixels
     :type width: int
     :param height: Texture height in pixels
     :type height: int
-    :return: Pixel data array with reveresed row order
-    :rtype: MutableSequence[float]
+    :param data: Row flattened pixel data array
+    :type data: bytes | bytearray
+    :return: Pixel data with reveresed row order
+    :rtype: bytes
     """
-    assert len(data) == (width * height)
+    assert len(data) == (width * height * 4)
 
-    new = deepcopy(data)
+    new = bytearray(data)
     for i in range(floor(height / 2)):
-        new[(height-i-1)*width:(height-i)*width] = data[i*width:(i+1)*width]
-        new[i*width:(i+1)*width] = data[(height-i-1)*width:(height-i)*width]
+        new[
+            (height-i-1)*width*4: (height-i)*width*4
+        ] = data[
+            i*width*4: (i+1)*width*4
+        ]
 
-    return new
+        new[
+            i*width*4: (i+1)*width*4
+        ] = data[
+            (height-i-1)*width*4: (height-i)*width*4
+        ]
+
+    return bytes(new)
 
 
 def swizzle_channels(
-    red: MutableSequence[float],
-    green: MutableSequence[float],
-    blue: MutableSequence[float],
-    alpha: MutableSequence[float],
+    data: bytes | bytearray,
     *,
     swizzle_red: PaaSwizzle = PaaSwizzle.RED,
     swizzle_green: PaaSwizzle = PaaSwizzle.GREEN,
     swizzle_blue: PaaSwizzle = PaaSwizzle.BLUE,
     swizzle_alpha: PaaSwizzle = PaaSwizzle.ALPHA,
-    process_blanks: bool = False
-) -> tuple[
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float]
-]:
+) -> bytes:
     """
     Process swizzling commands on a set of normalized RGBA channels.
 
@@ -1031,28 +905,16 @@ def swizzle_channels(
 
     .. code-block:: python
 
-        red: MutableSequence[float] = ...
-        green: MutableSequence[float] = ...
-        blue: MutableSequence[float] = ...
-        alpha: MutableSequence[float] = ...
+        data = b"\\xff\\x00\\xfc\\xff"
 
-        red, green, blue, alpha = swizzle_channels(
-            red,
-            green,
-            blue,
-            alpha,
+        data = swizzle_channels(
+            data,
             swizzle_red=PaaSwizzle.INVERTED_ALPHA
             swizzle_alpha=PaaSwizzle.INVERTED_RED
         )
 
-    :param red: Red channel data
-    :type red: MutableSequence[float]
-    :param green: Green channel data
-    :type green: MutableSequence[float]
-    :param blue: Blue channel data
-    :type blue: MutableSequence[float]
-    :param alpha: Alpha channel data
-    :type alpha: MutableSequence[float]
+    :param data: Decoded RGBA data
+    :type data: bytes | bytearray
     :param swizzle_red: Red swizzle, defaults to PaaSwizzle.RED
     :type swizzle_red: PaaSwizzle, optional
     :param swizzle_green: Green swizzle, defaults to PaaSwizzle.GREEN
@@ -1064,24 +926,18 @@ def swizzle_channels(
     :param process_blanks: Allow channel blanking, defaults to False
     :type process_blanks: bool, optional
     :return: Swizzled RGBA channel data
-    :rtype: tuple[ MutableSequence[float], ...]
-
-
+    :rtype: bytes
     """
-    pixels = len(red)
-    assert pixels == len(green) == len(blue) == len(alpha)
+    output = bytearray(data)
+    size = len(data)
 
-    sources = (alpha, red, green, blue)
-    targets = deepcopy(sources)
-
-    for command, source, channel in zip(
+    for command, channel in zip(
         (
             swizzle_alpha,
             swizzle_red,
             swizzle_green,
             swizzle_blue
         ),
-        sources,
         (
             PaaSwizzle.ALPHA,
             PaaSwizzle.RED,
@@ -1092,6 +948,10 @@ def swizzle_channels(
         if command is channel:
             continue
 
+        # shift indices down and move alpha to last
+        from_channel = (channel.value - 1) % 4
+        to_channel = ((command.value & 0b11) - 1) % 4
+
         match command:
             case (
                 PaaSwizzle.ALPHA
@@ -1099,25 +959,15 @@ def swizzle_channels(
                 | PaaSwizzle.GREEN
                 | PaaSwizzle.BLUE
             ):
-                target = targets[command.value]
-                for i in range(pixels):
-                    target[i] = source[i]
+                for i in range(0, size, 4):
+                    output[i + to_channel] = data[i + from_channel]
             case (
                 PaaSwizzle.INVERTED_ALPHA
                 | PaaSwizzle.INVERTED_RED
                 | PaaSwizzle.INVERTED_GREEN
                 | PaaSwizzle.INVERTED_BLUE
             ):
-                target = targets[command.value & 0b11]
-                for i in range(pixels):
-                    target[i] = 1 - source[i]
-            case PaaSwizzle.BLANK_WHITE if process_blanks:
-                target = targets[channel]
-                for i in range(pixels):
-                    target[i] = 1
-            case PaaSwizzle.BLANK_BLACK if process_blanks:
-                target = targets[channel]
-                for i in range(pixels):
-                    target[i] = 0
+                for i in range(0, size, 4):
+                    output[i + to_channel] = 255 - data[i + from_channel]
 
-    return (*targets[1:], targets[0])
+    return bytes(output)
