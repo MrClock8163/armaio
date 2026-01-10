@@ -3,8 +3,9 @@
 
 import struct
 from array import array
-from typing import IO
 from collections.abc import MutableSequence
+from typing import IO, BinaryIO
+from io import BytesIO
 
 
 class LzoError(Exception):
@@ -15,20 +16,26 @@ class LzoError(Exception):
 
 
 def lzo1x_decompress(
-    stream: IO[bytes],
+    data: bytes | bytearray | IO[bytes] | BinaryIO,
     expected_length: int
-) -> tuple[int, bytearray]:
+) -> tuple[int, bytes]:
     """
     Decompresses data compressed with the LZO1X algorithm.
 
-    :param stream: Source binary stream
-    :type stream: IO[bytes]
+    :param data: Source binary data
+    :type data: bytes | bytearray | IO[bytes] | BinaryIO
     :param expected: Expected decompressed length
     :type expected: int
     :raises LzoError: Could not decompress data due to an error
     :return: Number of consumed bytes and the decompressed data
-    :rtype: tuple[int, bytearray]
+    :rtype: tuple[int, bytes]
     """
+    stream: IO[bytes]
+    if isinstance(data, (bytes, bytearray)):
+        stream = BytesIO(data)
+    else:
+        stream = data
+
     state = 0
     start = stream.tell()
     output = bytearray()
@@ -155,7 +162,7 @@ def lzo1x_decompress(
             f"(expected: {expected_length:d}, got: {len(output)})"
         )
 
-    return stream.tell() - start, output
+    return stream.tell() - start, bytes(output)
 
 
 class LzssError(Exception):
@@ -166,16 +173,16 @@ class LzssError(Exception):
 
 
 def lzss_decompress(
-    stream: IO[bytes],
+    data: bytes | bytearray | IO[bytes] | BinaryIO,
     expected_length: int,
     *,
     signed_checksum: bool = False
-) -> tuple[int, bytearray]:
+) -> tuple[int, bytes]:
     """
     Decompress data compressed with the LZSS algorithm.
 
-    :param stream: Source binary stream
-    :type stream: IO[bytes]
+    :param data: Source binary data
+    :type data: bytes | bytearray | IO[bytes] | BinaryIO
     :param expected_length: Expected decompressed length
     :type expected_length: int
     :param signed_checksum: Use signed checksum instead of unsigned, defaults
@@ -183,8 +190,14 @@ def lzss_decompress(
     :type signed_checksum: bool, optional
     :raises LzssError: Could not decompress data due to an error
     :return: Number of consumed bytes and the decompressed data
-    :rtype: tuple[int, bytearray]
+    :rtype: tuple[int, bytes]
     """
+    stream: IO[bytes]
+    if isinstance(data, (bytes, bytearray)):
+        stream = BytesIO(data)
+    else:
+        stream = data
+
     start = stream.tell()
     output = bytearray()
 
@@ -235,7 +248,6 @@ def lzss_decompress(
             f"calculated {checksum_unpacked:d}"
         )
 
-    return stream.tell() - start, output
 
 
 class DxtError(Exception):
@@ -544,3 +556,4 @@ def dxt1_decompress(
                     alpha[idx] = a
 
     return red, green, blue, alpha
+    return stream.tell() - start, bytes(output)
