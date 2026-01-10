@@ -1,7 +1,6 @@
 """
 PAA codec plugin definitions for the Pillow library.
 """
-from collections.abc import MutableSequence
 
 from PIL import Image, ImageFile
 
@@ -21,6 +20,19 @@ def _accept(magic: bytes) -> bool:
         or magic.startswith(b"\x88\x88GGAT")  # RGBA8888
         or magic.startswith(b"\x80\x80GGAT")  # GRAY
     )
+
+
+def _strip_alpha(
+    width: int,
+    height: int,
+    data: bytes | bytearray
+) -> bytes:
+    output = bytearray()
+
+    for i in range(0, width * height * 4, 4):
+        output.extend(data[i:(i+3)])
+
+    return bytes(output)
 
 
 class PaaImageFile(ImageFile.ImageFile):
@@ -49,7 +61,7 @@ class PaaImageFile(ImageFile.ImageFile):
         ]
 
 
-class PaaDecoder(ImageFile.PyDecoder):
+class _PaaDecoder(ImageFile.PyDecoder):
     """
     Decoder for Arma 3 PAA texture files.
     """
@@ -76,14 +88,12 @@ class PaaDecoder(ImageFile.PyDecoder):
         alpha: bool
         paa, alpha = self.args
         mip = paa.mipmaps[0]
-        channels: tuple[MutableSequence[float], ...] = mip.decompress(
-            paa.format
-        )
+        data = mip.decode(paa.format)
 
         swizzle = paa.get_tagg(PaaSwizzleTagg)
         if swizzle:
-            channels = swizzle_channels(
-                *channels,
+            data = swizzle_channels(
+                data,
                 swizzle_red=swizzle.red,
                 swizzle_green=swizzle.green,
                 swizzle_blue=swizzle.blue,
@@ -91,15 +101,9 @@ class PaaDecoder(ImageFile.PyDecoder):
             )
 
         if not alpha:
-            channels = channels[:3]
+            data = _strip_alpha(mip.width, mip.height, data)
 
-        raw = [
-            round(255 * value)
-            for color in zip(*channels)
-            for value in color
-        ]
-
-        self.set_as_raw(bytes(raw))
+        self.set_as_raw(data)
         return -1, 0
 
 
@@ -116,7 +120,7 @@ def register_paa_codec() -> None:
 
     - ``PAA``
     """
-    Image.register_decoder("PAA", PaaDecoder)
+    Image.register_decoder("PAA", _PaaDecoder)
 
     Image.register_open(
         PaaImageFile.format,
