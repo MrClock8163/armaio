@@ -1,3 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 * text eol=lf
+
+*.png binary
+*.jpeg binary
+*.jpg binary
+
+*.paa binary
+*.pac binary
+*.bin binary
+*.p3d binary
+*.rtm binary
