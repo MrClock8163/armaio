@@ -1,5 +1,5 @@
 """
-PAA coded plugin definitions for the Pillow library.
+PAA codec plugin definitions for the Pillow library.
 """
 from collections.abc import MutableSequence
 
@@ -16,6 +16,10 @@ def _accept(magic: bytes) -> bool:
     return (
         magic.startswith(b"\x01\xffGGAT")  # DXT1
         or magic.startswith(b"\x05\xffGGAT")  # DXT5
+        or magic.startswith(b"\x44\x44GGAT")  # RGBA4444
+        or magic.startswith(b"\x55\x15GGAT")  # RGBA5551
+        or magic.startswith(b"\x88\x88GGAT")  # RGBA8888
+        or magic.startswith(b"\x80\x80GGAT")  # GRAY
     )
 
 
@@ -37,7 +41,7 @@ class PaaImageFile(ImageFile.ImageFile):
 
         self.tile = [
             ImageFile._Tile(
-                "PAADXT",
+                "PAA",
                 (0, 0) + self.size,
                 0,
                 (paa, alpha)
@@ -45,9 +49,9 @@ class PaaImageFile(ImageFile.ImageFile):
         ]
 
 
-class PaaDxtDecoder(ImageFile.PyDecoder):
+class PaaDecoder(ImageFile.PyDecoder):
     """
-    Decoder for DXT1 and DXT5 compressed Arma 3 PAA texture files.
+    Decoder for Arma 3 PAA texture files.
     """
     _pulls_fd = True
 
@@ -56,7 +60,8 @@ class PaaDxtDecoder(ImageFile.PyDecoder):
         buffer: bytes | Image.SupportsArrayInterface
     ) -> tuple[int, int]:
         """
-        Decodes the previously read data of a DXT compressed PAA texture file.
+        Decodes the previously read data of a PAA texture file supporting
+        various pixel formats.
 
         The method expects that the read :py:class:`~armaio.paa.PaaFile`, and
         a boolean indicating the presence of alpha data was passed as
@@ -100,7 +105,7 @@ class PaaDxtDecoder(ImageFile.PyDecoder):
 
 def register_paa_codec() -> None:
     """
-    Registers PAA codecs for the Pillow package.
+    Registers PAA codec for the Pillow package.
 
     Extensions:
 
@@ -109,9 +114,9 @@ def register_paa_codec() -> None:
 
     Decoders:
 
-    - ``PAADXT``: DXT1 or DXT5 compressed PAA
+    - ``PAA``
     """
-    Image.register_decoder("PAADXT", PaaDxtDecoder)
+    Image.register_decoder("PAA", PaaDecoder)
 
     Image.register_open(
         PaaImageFile.format,
