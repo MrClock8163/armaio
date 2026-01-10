@@ -12,12 +12,14 @@ from copy import deepcopy
 from typing import Self, TypeVar, IO
 from abc import ABC, abstractmethod
 from math import floor
+from array import array
 
 from .. import binary
 from ..compression import (
     dxt1_decompress,
     dxt5_decompress,
-    lzo1x_decompress
+    lzo1x_decompress,
+    lzss_decompress
 )
 
 
@@ -647,6 +649,142 @@ class PaaMipmap():
 
         return output
 
+    def _decompress_rgba8888(
+        self
+    ) -> tuple[
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float]
+    ]:
+        stream_lzss = BytesIO(self._raw)
+        expected = self.width * self.height * 4
+        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
+
+        red = array('f', bytearray(self.width * self.height) * 4)
+        green = array('f', bytearray(self.width * self.height) * 4)
+        blue = array('f', bytearray(self.width * self.height) * 4)
+        alpha = array('f', bytearray(self.width * self.height) * 4)
+
+        for i in range(self.width * self.height):
+            alpha[i] = data[i * 4 + 3] / 255
+            red[i] = data[i * 4 + 2] / 255
+            green[i] = data[i * 4 + 1] / 255
+            blue[i] = data[i * 4] / 255
+
+        return red, green, blue, alpha
+
+    def _decompress_rgba5551(
+        self
+    ) -> tuple[
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float]
+    ]:
+        stream_lzss = BytesIO(self._raw)
+        expected = self.width * self.height * 2
+        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
+
+        red = array('f', bytearray(self.width * self.height) * 4)
+        green = array('f', bytearray(self.width * self.height) * 4)
+        blue = array('f', bytearray(self.width * self.height) * 4)
+        alpha = array('f', bytearray(self.width * self.height) * 4)
+
+        for i in range(self.width * self.height):
+            argb = data[i * 2] + (data[i * 2 + 1] << 8)
+
+            alpha[i] = (argb >> 15)
+            red[i] = (argb >> 10 & 0b11111) / 0b11111
+            green[i] = (argb >> 5 & 0b11111) / 0b11111
+            blue[i] = (argb & 0b11111) / 0b11111
+
+        return red, green, blue, alpha
+
+    def _decompress_rgba4444(
+        self
+    ) -> tuple[
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float]
+    ]:
+        stream_lzss = BytesIO(self._raw)
+        expected = self.width * self.height * 2
+        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
+
+        red = array('f', bytearray(self.width * self.height) * 4)
+        green = array('f', bytearray(self.width * self.height) * 4)
+        blue = array('f', bytearray(self.width * self.height) * 4)
+        alpha = array('f', bytearray(self.width * self.height) * 4)
+
+        for i in range(self.width * self.height):
+            gb = data[i * 2]
+            ar = data[i * 2 + 1]
+
+            alpha[i] = (ar >> 4) / 0b1111
+            red[i] = (ar & 0b1111) / 0b1111
+            green[i] = (gb >> 4) / 0b1111
+            blue[i] = (gb & 0b1111) / 0b1111
+
+        return red, green, blue, alpha
+
+    def _decompress_ia88(
+        self
+    ) -> tuple[
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float]
+    ]:
+        stream_lzss = BytesIO(self._raw)
+        expected = self.width * self.height * 2
+        _, data = lzss_decompress(stream_lzss, expected, signed_checksum=True)
+
+        red = array('f', bytearray(self.width * self.height) * 4)
+        green = array('f', bytearray(self.width * self.height) * 4)
+        blue = array('f', bytearray(self.width * self.height) * 4)
+        alpha = array('f', bytearray(self.width * self.height) * 4)
+
+        for i in range(self.width * self.height):
+            gray = data[i * 2] / 255
+            opacity = data[i * 2 + 1] / 255
+
+            alpha[i] = opacity
+            red[i] = gray
+            green[i] = gray
+            blue[i] = gray
+
+        return red, green, blue, alpha
+
+    def _decompress_dxt(
+        self,
+        binary_alpha: bool = True
+    ) -> tuple[
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float],
+        MutableSequence[float]
+    ]:
+        if binary_alpha:
+            decompressor = dxt1_decompress
+            lzo_expected = self._width * self._height // 2
+        else:
+            decompressor = dxt5_decompress
+            lzo_expected = self._width * self._height
+
+        data: Buffer = self._raw
+        if self._lzo_compressed:
+            stream_lzo = BytesIO(data)
+            _, data = lzo1x_decompress(stream_lzo, lzo_expected)
+
+        stream_dxt = BytesIO(data)
+        return decompressor(
+            stream_dxt,
+            self._width,
+            self._height
+        )
+
     def decompress(
         self,
         format: PaaFormat
@@ -671,26 +809,20 @@ class PaaMipmap():
         """
         match format:
             case PaaFormat.DXT1:
-                decompressor = dxt1_decompress
-                lzo_expected = self._width * self._height // 2
+                return self._decompress_dxt(True)
             case PaaFormat.DXT5:
-                decompressor = dxt5_decompress
-                lzo_expected = self._width * self._height
-            case _:
-                raise PaaError(
-                    f"Unsupported format for decompression: {format}"
-                )
+                return self._decompress_dxt(False)
+            case PaaFormat.RGBA8888:
+                return self._decompress_rgba8888()
+            case PaaFormat.RGBA5551:
+                return self._decompress_rgba5551()
+            case PaaFormat.RGBA4444:
+                return self._decompress_rgba4444()
+            case PaaFormat.GRAY:
+                return self._decompress_ia88()
 
-        data: Buffer = self._raw
-        if self._lzo_compressed:
-            stream_lzo = BytesIO(data)
-            _, data = lzo1x_decompress(stream_lzo, lzo_expected)
-
-        stream_dxt = BytesIO(data)
-        return decompressor(
-            stream_dxt,
-            self._width,
-            self._height
+        raise PaaError(
+            f"Unsupported format: {format.name}"
         )
 
 
@@ -773,12 +905,6 @@ class PaaFile():
             output._format = PaaFormat(data_type)
         except Exception:
             raise PaaError(f"Unknown format type: {data_type:d}")
-
-        if output._format not in (PaaFormat.DXT1, PaaFormat.DXT5):
-            raise PaaError(
-                "Only DXT1 and DXT5 textures are supported, "
-                f"{output._format.name} is not"
-            )
 
         taggs: list[PaaTagg] = []
         while True:
