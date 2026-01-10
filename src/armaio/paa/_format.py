@@ -40,11 +40,11 @@ class PaaFormat(IntEnum):
     """S3TC BC3/DXT4 compressed with premultiplied alpha."""
     DXT5 = 0xff05
     """S3TC BC3/DXT5 compressed."""
-    RGBA4 = 0x4444
+    RGBA4444 = 0x4444
     """4-bit RGBA channels."""
-    RGBA5 = 0x1555
+    RGBA5551 = 0x1555
     """5-bit RGB channels with 1-bit alpha."""
-    RGBA8 = 0x8888
+    RGBA8888 = 0x8888
     """8-bit RGBA channels."""
     GRAY = 0x8080
     """8-bit gray with 8-bit alpha."""
