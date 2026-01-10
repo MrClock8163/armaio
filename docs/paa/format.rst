@@ -5,7 +5,10 @@ PAA format
 ==========
 
 The :py:mod:`armaio.paa` package provides facilities for reading the PAA
-texture format.
+texture format. The implementation are based on the information on the
+`Community Wiki PAA page <https://community.bistudio.com/wiki/PAA_File_Format>`_
+
+The module supports all PAA types available in the **TexView** application.
 
 Examples
 --------
@@ -16,14 +19,11 @@ Examples
 
     paa = PaaFile.read("texture_co.paa")
     mip0 = paa.mipmaps[0]
-    red, green, blue, alpha = mip0.decompress(paa.format)
+    rgba = mip0.decode(paa.format)
     swizzle = paa.get_tagg(PaaSwizzleTagg)
     if swizzle:
-        red, green, blue, alpha = swizzle_channels(
-            red,
-            green,
-            blue,
-            alpha,
+        rgba = swizzle_channels(
+            rgba,
             swizzle_red=swizzle.red
             swizzle_green=swizzle.green
             swizzle_blue=swizzle.blue
@@ -33,6 +33,33 @@ Examples
 Functions
 ---------
 
+Decoding
+^^^^^^^^
+
+.. note::
+
+    The implementations of the S3TC DXT1/BC1 and DXT5/BC3 decoding algorithms
+    are based on publically available documentation:
+
+    - `Wikipedia <https://en.wikipedia.org/wiki/S3_Texture_Compression>`_
+    - `OpenGL Wiki <https://www.khronos.org/opengl/wiki/S3_Texture_Compression>`_
+
+.. autofunction:: decode_dxt1
+.. autofunction:: decode_dxt5
+
+.. note::
+
+    The implementations of the bit packed decodings are based on the
+    `Community Wiki <https://community.bistudio.com/wiki/PAA_File_Format>`_
+
+.. autofunction:: decode_rgba8888
+.. autofunction:: decode_rgba5551
+.. autofunction:: decode_rgba4444
+.. autofunction:: decode_ia88
+
+Utilities
+^^^^^^^^^
+
 .. autofunction:: reverse_row_order
 .. autofunction:: swizzle_channels
 
@@ -40,6 +67,7 @@ Exceptions
 ----------
 
 .. autoclass:: PaaError
+.. autoclass:: DxtError
 
 Enumerations
 ------------

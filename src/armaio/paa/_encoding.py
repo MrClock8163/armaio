@@ -159,8 +159,6 @@ def decode_dxt1(
     """
     Decodes texture data compressed with the S3TC DXT1/BC1 algorithm.
 
-    The RGBA data is returned in top-to-bottom row order.
-
     :param width: Texture width in pixels
     :type width: int
     :param height: Texture height in pixels
@@ -276,8 +274,6 @@ def decode_dxt5(
 ) -> bytes:
     """
     Decodes texture data compressed with the S3TC DXT5/BC3 algorithm.
-
-    The RGBA data is returned in top-to-bottom row order.
 
     :param width: Texture width in pixels
     :type width: int

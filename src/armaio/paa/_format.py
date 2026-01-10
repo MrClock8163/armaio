@@ -37,11 +37,15 @@ class PaaFormat(IntEnum):
     DXT1 = 0xff01
     """S3TC BC1/DXT1 compressed."""
     DXT2 = 0xff02
-    """S3TC BC2/DXT2 compressed with premultiplied alpha."""
+    """
+    S3TC BC2/DXT2 compressed with premultiplied alpha (**NOT SUPPORTED**).
+    """
     DXT3 = 0xff03
-    """S3TC BC2/DXT3 compressed."""
+    """S3TC BC2/DXT3 compressed (**NOT SUPPORTED**)."""
     DXT4 = 0xff04
-    """S3TC BC3/DXT4 compressed with premultiplied alpha."""
+    """
+    S3TC BC3/DXT4 compressed with premultiplied alpha (**NOT SUPPORTED**).
+    """
     DXT5 = 0xff05
     """S3TC BC3/DXT5 compressed."""
     RGBA4444 = 0x4444
@@ -83,9 +87,9 @@ class PaaSwizzle(IntEnum):
     INVERTED_BLUE = 7
     """Invert and copy to blue channel."""
     BLANK_WHITE = 8
-    """Blank over with white."""
+    """Blank over with white (**NOT SUPPORTED**)."""
     BLANK_BLACK = 9
-    """Blank over with black."""
+    """Blank over with black (**NOT SUPPORTED**)."""
 
 
 class PaaTagg(ABC):
@@ -655,6 +659,18 @@ class PaaMipmap():
         self,
         format: PaaFormat
     ) -> bytes:
+        """
+        Decodes the encoded mipmap pixel data according to the given format.
+
+        All internal conditional or uncondition compression is handled
+        automatically.
+
+        :param format: Encoding format
+        :type format: PaaFormat
+        :raises PaaError: Unsupported PAA format
+        :return: Decoded RGBA data
+        :rtype: bytes
+        """
         data: bytes = self._raw
         match format:
             case (
@@ -899,7 +915,7 @@ def swizzle_channels(
     swizzle_alpha: PaaSwizzle = PaaSwizzle.ALPHA,
 ) -> bytes:
     """
-    Process swizzling commands on a set of normalized RGBA channels.
+    Process swizzling commands on decoded RGBA data.
 
     Example:
 
@@ -923,9 +939,7 @@ def swizzle_channels(
     :type swizzle_blue: PaaSwizzle, optional
     :param swizzle_alpha: Alpha swizzle, defaults to PaaSwizzle.ALPHA
     :type swizzle_alpha: PaaSwizzle, optional
-    :param process_blanks: Allow channel blanking, defaults to False
-    :type process_blanks: bool, optional
-    :return: Swizzled RGBA channel data
+    :return: Swizzled RGBA data
     :rtype: bytes
     """
     output = bytearray(data)

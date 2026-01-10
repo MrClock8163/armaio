@@ -4,12 +4,15 @@
 Data types
 ==========
 
-The :py:mod:`armaio.binary` module provides utility functions for reading and writing the basic data types used in Arma 3 file formats as outlined on the `community wiki <https://community.bistudio.com/wiki/Generic_FileFormat_Data_Types>`_.
+The :py:mod:`armaio.binary` module provides utility functions for reading and
+writing the basic data types used in Arma 3 file formats as outlined on the
+`community wiki <https://community.bistudio.com/wiki/Generic_FileFormat_Data_Types>`_.
 
 Examples
 --------
 
-The following examples give a simple demonstration about the usage of the function in the module.
+The following examples give a simple demonstration about the usage of the
+function in the module.
 
 Writing
 ^^^^^^^
