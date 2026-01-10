@@ -17,7 +17,8 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None)
+    "python": ("https://docs.python.org/3", None),
+    "pillow": ("https://pillow.readthedocs.io/en/latest", None)
 }
 
 templates_path = ['_templates']
@@ -30,7 +31,9 @@ html_copy_source = False
 
 nitpicky = True
 nitpick_ignore = {
-    ("py:class", "optional")
+    ("py:class", "_T"),
+    ("py:class", "optional"),
+    ("py:class", "StrOrBytesPath")
 }
 
 

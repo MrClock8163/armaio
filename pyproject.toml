@@ -37,6 +37,12 @@ keywords = ["arma3", "bi", "p3d", "rtm", "paa"]
 Repository = "https://github.com/MrClock8163/armaio"
 Issues = "https://github.com/MrClock8163/armaio/issues"
 
+[project.optional-dependencies]
+all = ["armaio[pillow]"]
+pillow = [
+    "pillow~=12.0"
+]
+
 [dependency-groups]
 testing = [
     "pytest ~= 9.0.0"

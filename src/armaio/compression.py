@@ -2,33 +2,38 @@
 
 
 import struct
-from array import array
-from typing import BinaryIO
-from collections.abc import MutableSequence
+from typing import IO, BinaryIO
+from io import BytesIO
 
 
 class LzoError(Exception):
-    """Expection raised upon LZO decompression errors."""
+    """Exception raised upon LZO decompression errors."""
 
     def __str__(self) -> str:
         return f"LZO - {super().__str__()}"
 
 
 def lzo1x_decompress(
-    stream: BinaryIO,
+    data: bytes | bytearray | IO[bytes] | BinaryIO,
     expected_length: int
-) -> tuple[int, bytearray]:
+) -> tuple[int, bytes]:
     """
     Decompresses data compressed with the LZO1X algorithm.
 
-    :param file: Source binary stream
-    :type file: BinaryIO
+    :param data: Source binary data
+    :type data: bytes | bytearray | IO[bytes] | BinaryIO
     :param expected: Expected decompressed length
     :type expected: int
     :raises LzoError: Could not decompress data due to an error
     :return: Number of consumed bytes and the decompressed data
-    :rtype: tuple[int, bytearray]
+    :rtype: tuple[int, bytes]
     """
+    stream: IO[bytes]
+    if isinstance(data, (bytes, bytearray)):
+        stream = BytesIO(data)
+    else:
+        stream = data
+
     state = 0
     start = stream.tell()
     output = bytearray()
@@ -155,314 +160,90 @@ def lzo1x_decompress(
             f"(expected: {expected_length:d}, got: {len(output)})"
         )
 
-    return stream.tell() - start, output
+    return stream.tell() - start, bytes(output)
 
 
-class DxtError(Exception):
-    """Expection raised upon DXT decompression errors."""
+class LzssError(Exception):
+    """Exception raised upon LZSS decompression errors."""
 
     def __str__(self) -> str:
-        return f"DXT - {super().__str__()}"
+        return f"LZSS - {super().__str__()}"
 
 
-def dxt5_decompress(
-    stream: BinaryIO,
-    width: int,
-    height: int
-) -> tuple[
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float]
-]:
+def lzss_decompress(
+    data: bytes | bytearray | IO[bytes] | BinaryIO,
+    expected_length: int,
+    *,
+    signed_checksum: bool = False
+) -> tuple[int, bytes]:
     """
-    Decompresses texture data compressed with the S3TC DXT5/BC3 algorithm.
+    Decompress data compressed with the LZSS algorithm.
 
-    The data is returned in bottom-to-top row order, conforming to the
-    OpenGL conventions.
-
-    :param stream: Source binary stream
-    :type stream: BinaryIO
-    :param width: Texture width in pixels
-    :type width: int
-    :param height: Texture height in pixels
-    :type height: int
-    :raises DxtError: Could not decompress texture due to an error
-    :return: Red, Green, Blue and Alpha channels as row-major flattened arrays
-    :rtype: tuple[MutableSequence[float], ...]
+    :param data: Source binary data
+    :type data: bytes | bytearray | IO[bytes] | BinaryIO
+    :param expected_length: Expected decompressed length
+    :type expected_length: int
+    :param signed_checksum: Use signed checksum instead of unsigned, defaults
+        to False
+    :type signed_checksum: bool, optional
+    :raises LzssError: Could not decompress data due to an error
+    :return: Number of consumed bytes and the decompressed data
+    :rtype: tuple[int, bytes]
     """
-    if width % 4 != 0 or height % 4 != 0:
-        raise DxtError(f"Unexpected resolution: {width} x {height}")
+    stream: IO[bytes]
+    if isinstance(data, (bytes, bytearray)):
+        stream = BytesIO(data)
+    else:
+        stream = data
 
-    red = array('f', bytearray(width * height * 4))
-    green = array('f', bytearray(width * height * 4))
-    blue = array('f', bytearray(width * height * 4))
-    alpha = array('f', bytearray(width * height * 4))
-    struct_block_color = struct.Struct('<HHI')
-    struct_block_alpha = struct.Struct('BB')
-    struct_block_atable = struct.Struct('<Q')
+    start = stream.tell()
+    output = bytearray()
 
-    # Interpolation coefficients
-    acoef67 = 6 / 7
-    acoef17 = 1 / 7
-    acoef57 = 5 / 7
-    acoef27 = 2 / 7
-    acoef47 = 4 / 7
-    acoef37 = 3 / 7
+    def read_pointer() -> tuple[int, int]:
+        offset, length = stream.read(2)
+        offset += (length & 0xf0) << 4
+        length = (length & 0x0f) + 3  # minimum length is 3
 
-    acoef45 = 4 / 5
-    acoef15 = 1 / 5
-    acoef35 = 3 / 5
-    acoef25 = 2 / 5
+        return offset, length
 
-    coef23 = 2 / 3
-    coef13 = 1 / 3
+    while len(output) < expected_length:
+        flag = stream.read(1)[0]
+        for bit in range(8):
+            if len(output) >= expected_length:
+                break
 
-    block_count_w = width // 4
-    block_count_h = height // 4
+            if flag & 2**bit:
+                output.extend(stream.read(1))
+                continue
 
-    # Decompression of blocks from left->right, top->bottom
-    for brow in range(block_count_h):
-        for bcol in range(block_count_w):
-            a0, a1, = struct_block_alpha.unpack(stream.read(2))
-            atable = struct_block_atable.unpack(
-                stream.read(6) + b"\x00\x00")[0]
-            v0, v1, table = struct_block_color.unpack(stream.read(8))
+            offset, length = read_pointer()
+            start = len(output) - offset
+            # filler 0x20 when start is before the buffer beginning
+            output.extend(-start * b"\x20")
+            # copy as many whole chunks as possible
+            output.extend(output[start:] * (length // offset))
+            # copy remainder
+            output.extend(output[start:(start + (length % offset))])
 
-            # Expanding directly stored colors
-            r0 = (v0 >> 11) / 31
-            g0 = ((v0 >> 5) & 0x3f) / 63
-            b0 = (v0 & 0x1f) / 31
-
-            r1 = (v1 >> 11) / 31
-            g1 = ((v1 >> 5) & 0x3f) / 63
-            b1 = (v1 & 0x1f) / 31
-
-            # Color interpolation
-            if v0 > v1:
-                r2 = coef23 * r0 + coef13 * r1
-                g2 = coef23 * g0 + coef13 * g1
-                b2 = coef23 * b0 + coef13 * b1
-
-                r3 = coef13 * r0 + coef23 * r1
-                g3 = coef13 * g0 + coef23 * g1
-                b3 = coef13 * b0 + coef23 * b1
-            else:
-                r2 = 0.5 * (r0 + r1)
-                g2 = 0.5 * (g0 + g1)
-                b2 = 0.5 * (b0 + b1)
-                r3 = g3 = b3 = 0
-
-            # Alpha interpolation
-            if a0 > a1:
-                a0 /= 255
-                a1 /= 255
-                a2 = acoef67 * a0 + acoef17 * a1
-                a3 = acoef57 * a0 + acoef27 * a1
-                a4 = acoef47 * a0 + acoef37 * a1
-                a5 = acoef37 * a0 + acoef47 * a1
-                a6 = acoef27 * a0 + acoef57 * a1
-                a7 = acoef17 * a0 + acoef67 * a1
-            else:
-                a0 /= 255
-                a1 /= 255
-                a2 = acoef45 * a0 + acoef15 * a1
-                a3 = acoef35 * a0 + acoef25 * a1
-                a4 = acoef25 * a0 + acoef35 * a1
-                a5 = acoef15 * a0 + acoef45 * a1
-                a6 = 0
-                a7 = 1
-
-            # Color code
-            codes = (
-                table & 0x3,
-                table >> 2 & 0x3,
-                table >> 4 & 0x3,
-                table >> 6 & 0x3,
-                table >> 8 & 0x3,
-                table >> 10 & 0x3,
-                table >> 12 & 0x3,
-                table >> 14 & 0x3,
-                table >> 16 & 0x3,
-                table >> 18 & 0x3,
-                table >> 20 & 0x3,
-                table >> 22 & 0x3,
-                table >> 24 & 0x3,
-                table >> 26 & 0x3,
-                table >> 28 & 0x3,
-                table >> 30 & 0x3
+    if signed_checksum:
+        checksum_read: int = struct.unpack("<i", stream.read(4))[0]
+        checksum_unpacked = sum(
+            map(
+                lambda x: x - (x >> 7 << 8),  # signed sum
+                output
             )
-            # Alpha codes
-            acodes = (
-                atable & 0x7,
-                atable >> 3 & 0x7,
-                atable >> 6 & 0x7,
-                atable >> 9 & 0x7,
-                atable >> 12 & 0x7,
-                atable >> 15 & 0x7,
-                atable >> 18 & 0x7,
-                atable >> 21 & 0x7,
-                atable >> 24 & 0x7,
-                atable >> 27 & 0x7,
-                atable >> 30 & 0x7,
-                atable >> 33 & 0x7,
-                atable >> 36 & 0x7,
-                atable >> 39 & 0x7,
-                atable >> 42 & 0x7,
-                atable >> 45 & 0x7
-            )
-            # Color lookup
-            lut = (
-                (r0, g0, b0),
-                (r1, g1, b1),
-                (r2, g2, b2),
-                (r3, g3, b3)
-            )
-            # Alpha lookup
-            alut = (a0, a1, a2, a3, a4, a5, a6, a7)
+        )
+        # just to be sure
+        checksum_unpacked &= 0xffffffff
+        checksum_unpacked -= (checksum_unpacked >> 31 << 32)
+    else:
+        checksum_read = struct.unpack("<I", stream.read(4))[0]
+        checksum_unpacked = sum(output) & 0xffffffff
 
-            # Block interpretation
+    if checksum_unpacked != checksum_read:
+        raise LzssError(
+            f"Checksum mismatch: read {checksum_read:d}, "
+            f"calculated {checksum_unpacked:d}"
+        )
 
-            # index of the starting row of the block
-            bstartrow = height - brow * 4
-            # index of the starting column of the block
-            bstartcol = bcol * 4
-            for row in range(4):
-                # flattened index of the first pixel in the row
-                current_row_col = (bstartrow - row - 1) * width + bstartcol
-                for col in range(4):
-                    # pixel index inside current flattened block
-                    pix = row * 4 + col
-                    r, g, b = lut[codes[pix]]
-                    a = alut[acodes[pix]]
-                    # flattened intdex of the current pixel
-                    idx = current_row_col + col
-                    red[idx] = r
-                    green[idx] = g
-                    blue[idx] = b
-                    alpha[idx] = a
-
-    return red, green, blue, alpha
-
-
-def dxt1_decompress(
-    stream: BinaryIO,
-    width: int,
-    height: int
-) -> tuple[
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float],
-    MutableSequence[float]
-]:
-    """
-    Decompresses texture data compressed with the S3TC DXT1/BC1 algorithm.
-
-    The data is returned in bottom-to-top row order, conforming to the
-    OpenGL conventions.
-
-    :param stream: Source binary stream
-    :type stream: BinaryIO
-    :param width: Texture width in pixels
-    :type width: int
-    :param height: Texture height in pixels
-    :type height: int
-    :raises DxtError: Could not decompress texture due to an error
-    :return: Red, Green and Blue channels as row-major flattened arrays
-    :rtype: tuple[MutableSequence[float], ...]
-    """
-    if width % 4 != 0 or height % 4 != 0:
-        raise DxtError(f"Unexpected resolution: {width} x {height}")
-
-    red = array('f', bytearray(width * height * 4))
-    green = array('f', bytearray(width * height * 4))
-    blue = array('f', bytearray(width * height * 4))
-    alpha = array('f', bytearray(width * height * 4))
-    struct_block = struct.Struct('<HHI')
-
-    # Interpolation coefficients
-    coef0 = 2 / 3
-    coef1 = 1 / 3
-
-    block_count_w = width // 4
-    block_count_h = height // 4
-
-    a0 = a1 = a2 = 1
-
-    # Decompression of blocks from left->right, top->bottom
-    for brow in range(block_count_h):
-        for bcol in range(block_count_w):
-            v0, v1, table = struct_block.unpack(stream.read(8))
-
-            # Expanding directly stored colors
-            r0 = (v0 >> 11) / 31
-            g0 = ((v0 >> 5) & 0x3f) / 63
-            b0 = (v0 & 0x1f) / 31
-
-            r1 = (v1 >> 11) / 31
-            g1 = ((v1 >> 5) & 0x3f) / 63
-            b1 = (v1 & 0x1f) / 31
-
-            # Color interpolation
-            if v0 > v1:
-                r2 = coef0 * r0 + coef1 * r1
-                g2 = coef0 * g0 + coef1 * g1
-                b2 = coef0 * b0 + coef1 * b1
-
-                r3 = coef1 * r0 + coef0 * r1
-                g3 = coef1 * g0 + coef0 * g1
-                b3 = coef1 * b0 + coef0 * b1
-
-                a3 = 1
-            else:
-                r2 = 0.5 * (r0 + r1)
-                g2 = 0.5 * (g0 + g1)
-                b2 = 0.5 * (b0 + b1)
-
-                r3 = g3 = b3 = a3 = 0
-
-            # Color codes
-            codes = (
-                table & 0x3,
-                table >> 2 & 0x3,
-                table >> 4 & 0x3,
-                table >> 6 & 0x3,
-                table >> 8 & 0x3,
-                table >> 10 & 0x3,
-                table >> 12 & 0x3,
-                table >> 14 & 0x3,
-                table >> 16 & 0x3,
-                table >> 18 & 0x3,
-                table >> 20 & 0x3,
-                table >> 22 & 0x3,
-                table >> 24 & 0x3,
-                table >> 26 & 0x3,
-                table >> 28 & 0x3,
-                table >> 30 & 0x3
-            )
-            # Color lookup
-            lut = (
-                (r0, g0, b0, a0),
-                (r1, g1, b1, a1),
-                (r2, g2, b2, a2),
-                (r3, g3, b3, a3)
-            )
-
-            # Block interpretation
-            # index of the starting row of the block
-            bstartrow = height - brow * 4
-            # index of the starting column of the block
-            bstartcol = bcol * 4
-            for row in range(4):
-                # flattened index of the first pixel in the row
-                current_row_col = (bstartrow - row - 1) * width + bstartcol
-                for col in range(4):
-                    r, g, b, a = lut[codes[row * 4 + col]]
-                    # flattened intdex of the current pixel
-                    idx = current_row_col + col
-                    red[idx] = r
-                    green[idx] = g
-                    blue[idx] = b
-                    alpha[idx] = a
-
-    return red, green, blue, alpha
+    return stream.tell() - start, bytes(output)

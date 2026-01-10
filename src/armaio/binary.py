@@ -8,7 +8,7 @@ https://community.bistudio.com/wiki/Generic_FileFormat_Data_Types
 import struct
 import functools
 import itertools
-from typing import BinaryIO
+from typing import IO
 
 
 _byte = struct.Struct("B")
@@ -21,24 +21,24 @@ _float = struct.Struct("<f")
 _double = struct.Struct("<d")
 
 
-def read_byte(stream: BinaryIO) -> int:
+def read_byte(stream: IO[bytes]) -> int:
     """
     Reads a single byte as an unsigned integer.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 8-bit unsigned integer
     :rtype: int
     """
     return _byte.unpack(stream.read(1))[0]  # type: ignore[no-any-return]
 
 
-def read_bytes(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
+def read_bytes(stream: IO[bytes], count: int = 1) -> tuple[int, ...]:
     """
     Reads multiple bytes as unsigned integers.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of bytes to read, defaults to 1
     :type count: int, optional
     :return: 8-bit unsigned integers
@@ -47,36 +47,36 @@ def read_bytes(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
     return struct.unpack(f"<{count:d}B", stream.read(count))
 
 
-def read_bool(stream: BinaryIO) -> bool:
+def read_bool(stream: IO[bytes]) -> bool:
     """
     Reads a single byte as boolean.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: Boolean value
     :rtype: bool
     """
     return read_byte(stream) != 0
 
 
-def read_short(stream: BinaryIO) -> int:
+def read_short(stream: IO[bytes]) -> int:
     """
     Reads a single little-endian short integer.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 16-bit signed integer
     :rtype: int
     """
     return _short.unpack(stream.read(2))[0]  # type: ignore[no-any-return]
 
 
-def read_shorts(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
+def read_shorts(stream: IO[bytes], count: int = 1) -> tuple[int, ...]:
     """
     Reads multiple little-endian short integers.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of integers to read, defaults to 1
     :type count: int, optional
     :return: 16-bit unsigned integers
@@ -85,24 +85,24 @@ def read_shorts(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
     return struct.unpack(f"<{count:d}h", stream.read(2 * count))
 
 
-def read_ushort(stream: BinaryIO) -> int:
+def read_ushort(stream: IO[bytes]) -> int:
     """
     Reads a single little-endian unsigned short integer.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 16-bit unsigned integer
     :rtype: int
     """
     return _ushort.unpack(stream.read(2))[0]  # type: ignore[no-any-return]
 
 
-def read_ushorts(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
+def read_ushorts(stream: IO[bytes], count: int = 1) -> tuple[int, ...]:
     """
     Reads multiple little-endian unsigned short integers.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of integers to read, defaults to 1
     :type count: int, optional
     :return: 16-bit unsigned integers
@@ -111,24 +111,24 @@ def read_ushorts(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
     return struct.unpack(f"<{count:d}H", stream.read(2 * count))
 
 
-def read_long(stream: BinaryIO) -> int:
+def read_long(stream: IO[bytes]) -> int:
     """
     Reads a single little-endian long integer.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 32-bit signed integer
     :rtype: int
     """
     return _long.unpack(stream.read(4))[0]  # type: ignore[no-any-return]
 
 
-def read_longs(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
+def read_longs(stream: IO[bytes], count: int = 1) -> tuple[int, ...]:
     """
     Reads multiple little-endian long integers.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of integers to read, defaults to 1
     :type count: int, optional
     :return: 32-bit signed integers
@@ -137,24 +137,24 @@ def read_longs(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
     return struct.unpack(f"<{count:d}i", stream.read(4 * count))
 
 
-def read_ulong(stream: BinaryIO) -> int:
+def read_ulong(stream: IO[bytes]) -> int:
     """
     Reads a single little-endian unsigned long integer.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 32-bit unsigned integer
     :rtype: int
     """
     return _ulong.unpack(stream.read(4))[0]  # type: ignore[no-any-return]
 
 
-def read_ulongs(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
+def read_ulongs(stream: IO[bytes], count: int = 1) -> tuple[int, ...]:
     """
     Reads multiple little-endian unsigned long integers.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of integers to read, defaults to 1
     :type count: int, optional
     :return: 32-bit unsigned integers
@@ -163,7 +163,7 @@ def read_ulongs(stream: BinaryIO, count: int = 1) -> tuple[int, ...]:
     return struct.unpack(f"<{count:d}I", stream.read(4 * count))
 
 
-def read_compressed_uint(stream: BinaryIO) -> int:
+def read_compressed_uint(stream: IO[bytes]) -> int:
     """
     Reads a little-endian compressed unsigned integer.
 
@@ -171,7 +171,7 @@ def read_compressed_uint(stream: BinaryIO) -> int:
     the high bit signals if the next byte has to be read.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 7-bit encoded compressed unsigned integer
     :rtype: int
     """
@@ -187,24 +187,24 @@ def read_compressed_uint(stream: BinaryIO) -> int:
     return output
 
 
-def read_half(stream: BinaryIO) -> float:
+def read_half(stream: IO[bytes]) -> float:
     """
     Reads a single little-endian half-precision float.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 16-bit float
     :rtype: float
     """
     return _half.unpack(stream.read(2))[0]  # type: ignore[no-any-return]
 
 
-def read_halfs(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
+def read_halfs(stream: IO[bytes], count: int = 1) -> tuple[float, ...]:
     """
     Reads multiple little-endian half-precision floats.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of floats to read, defaults to 1
     :type count: int, optional
     :return: 16-bit floats
@@ -213,24 +213,24 @@ def read_halfs(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
     return struct.unpack(f"<{count:d}e", stream.read(2 * count))
 
 
-def read_float(stream: BinaryIO) -> float:
+def read_float(stream: IO[bytes]) -> float:
     """
     Reads a single little-endian single-precision float.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 32-bit float
     :rtype: float
     """
     return _float.unpack(stream.read(4))[0]  # type: ignore[no-any-return]
 
 
-def read_floats(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
+def read_floats(stream: IO[bytes], count: int = 1) -> tuple[float, ...]:
     """
     Reads multiple little-endian single-precision floats.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of floats to read, defaults to 1
     :type count: int, optional
     :return: 32-bit floats
@@ -239,24 +239,24 @@ def read_floats(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
     return struct.unpack(f"<{count:d}f", stream.read(4 * count))
 
 
-def read_double(stream: BinaryIO) -> float:
+def read_double(stream: IO[bytes]) -> float:
     """
     Reads a single little-endian double-precision float.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: 64-bit float
     :rtype: float
     """
     return _double.unpack(stream.read(8))[0]  # type: ignore[no-any-return]
 
 
-def read_doubles(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
+def read_doubles(stream: IO[bytes], count: int = 1) -> tuple[float, ...]:
     """
     Reads multiple little-endian double-precision floats.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of floats to read, defaults to 1
     :type count: int, optional
     :return: 64-bit floats
@@ -271,12 +271,12 @@ def read_doubles(stream: BinaryIO, count: int = 1) -> tuple[float, ...]:
 # result for valid ASCII values.
 
 
-def read_char(stream: BinaryIO, count: int = 1) -> str:
+def read_char(stream: IO[bytes], count: int = 1) -> str:
     """
     Reads a sequence of ASCII characters.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param count: Number of characters to read, defaults to 1
     :type count: int, optional
     :return: String of ASCII characters
@@ -287,12 +287,12 @@ def read_char(stream: BinaryIO, count: int = 1) -> str:
 
 
 # https://stackoverflow.com/a/32775270
-def read_asciiz(stream: BinaryIO) -> str:
+def read_asciiz(stream: IO[bytes]) -> str:
     """
     Reads a NULL-terminated ASCII string.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :return: ASCII string
     :rtype: str
     """
@@ -302,12 +302,12 @@ def read_asciiz(stream: BinaryIO) -> str:
     ).decode("utf8", errors="replace")
 
 
-def read_asciiz_field(stream: BinaryIO, field: int) -> str:
+def read_asciiz_field(stream: IO[bytes], field: int) -> str:
     """
     Reads a NULL-terminated ASCII string NULL padded to field length.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param field: Field length
     :type field: int
     :raises EOFError: EOF was encountered in given length
@@ -326,14 +326,14 @@ def read_asciiz_field(stream: BinaryIO, field: int) -> str:
     return parts[0].decode("utf8", errors="replace")
 
 
-def read_lascii(stream: BinaryIO) -> str:
+def read_lascii(stream: IO[bytes]) -> str:
     """
     Reads a length-prefixed ASCII string.
 
     The string can be at most 255 characters long.
 
     :param stream: Source binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :raises EOFError: EOF was encountered in expected length
     :return: ASCII string
     :rtype: str
@@ -346,79 +346,79 @@ def read_lascii(stream: BinaryIO) -> str:
     return value.decode("utf8", errors="replace")
 
 
-def write_byte(stream: BinaryIO, *args: int) -> None:
+def write_byte(stream: IO[bytes], *args: int) -> None:
     """
     Writes integers as bytes.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 8-bit unsigned integers
     :type args: int
     """
     stream.write(struct.pack(f"{len(args):d}B", *args))
 
 
-def write_bool(stream: BinaryIO, value: bool) -> None:
+def write_bool(stream: IO[bytes], value: bool) -> None:
     """
     Writes a boolean as a byte.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param value: Boolean value
     :type value: bool
     """
     write_byte(stream, value)
 
 
-def write_short(stream: BinaryIO, *args: int) -> None:
+def write_short(stream: IO[bytes], *args: int) -> None:
     """
     Writes little-endian short integers.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 16-bit integers
     :type args: int
     """
     stream.write(struct.pack(f"<{len(args):d}h", *args))
 
 
-def write_ushort(stream: BinaryIO, *args: int) -> None:
+def write_ushort(stream: IO[bytes], *args: int) -> None:
     """
     Writes little-endian unsigned short integers.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 16-bit unsigned integers
     :type args: int
     """
     stream.write(struct.pack(f"<{len(args):d}H", *args))
 
 
-def write_long(stream: BinaryIO, *args: int) -> None:
+def write_long(stream: IO[bytes], *args: int) -> None:
     """
     Writes little-endian long integers.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 32-bit integers
     :type args: int
     """
     stream.write(struct.pack(f"<{len(args):d}i", *args))
 
 
-def write_ulong(stream: BinaryIO, *args: int) -> None:
+def write_ulong(stream: IO[bytes], *args: int) -> None:
     """
     Writes little-endian unsigned long integers.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 32-bit unsigned integers
     :type args: int
     """
     stream.write(struct.pack(f"<{len(args):d}I", *args))
 
 
-def write_compressed_uint(stream: BinaryIO, value: int) -> None:
+def write_compressed_uint(stream: IO[bytes], value: int) -> None:
     """
     Writes a little-endian compressed unsigned integer.
 
@@ -426,7 +426,7 @@ def write_compressed_uint(stream: BinaryIO, value: int) -> None:
     the high bit signals if the next byte has to be read.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param value: Unsigned integer
     :type value: int
     """
@@ -440,72 +440,72 @@ def write_compressed_uint(stream: BinaryIO, value: int) -> None:
         temp = temp >> 7
 
 
-def write_half(stream: BinaryIO, *args: float) -> None:
+def write_half(stream: IO[bytes], *args: float) -> None:
     """
     Writes little-endian half-precision floats.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 16-bit floats
     :type args: float
     """
     stream.write(struct.pack(f"<{len(args):d}e", *args))
 
 
-def write_float(stream: BinaryIO, *args: float) -> None:
+def write_float(stream: IO[bytes], *args: float) -> None:
     """
     Writes little-endian single-precision floats.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 32-bit floats
     :type args: float
     """
     stream.write(struct.pack(f"<{len(args):d}f", *args))
 
 
-def write_double(stream: BinaryIO, *args: float) -> None:
+def write_double(stream: IO[bytes], *args: float) -> None:
     """
     Writes little-endian double-precision floats.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param args: 64-bit floats
     :type args: float
     """
     stream.write(struct.pack(f"<{len(args):d}d", *args))
 
 
-def write_chars(stream: BinaryIO, values: str) -> None:
+def write_chars(stream: IO[bytes], values: str) -> None:
     """
     Writes a sequence of ASCII characters.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param values: ASCII string
     :type values: str
     """
     stream.write(struct.pack(f"<{len(values):d}s", values.encode('ascii')))
 
 
-def write_asciiz(stream: BinaryIO, value: str) -> None:
+def write_asciiz(stream: IO[bytes], value: str) -> None:
     """
     Writes a NULL-terminated ASCII string.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param value: ASCII string
     :type value: str
     """
     stream.write(struct.pack(f"<{len(value) + 1:d}s", value.encode('ascii')))
 
 
-def write_asciiz_field(stream: BinaryIO, value: str, field: int) -> None:
+def write_asciiz_field(stream: IO[bytes], value: str, field: int) -> None:
     """
     Writes a NULL-terminated ASCII string to a NULL paddded field.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param value: ASCII string
     :type value: str
     :param field: Field length
@@ -521,14 +521,14 @@ def write_asciiz_field(stream: BinaryIO, value: str, field: int) -> None:
     stream.write(struct.pack(f"<{field:d}s", value.encode('ascii')))
 
 
-def write_lascii(stream: BinaryIO, value: str) -> None:
+def write_lascii(stream: IO[bytes], value: str) -> None:
     """
     Writes length-prefixed ASCII string.
 
     The string can be at most 255 characters.
 
     :param stream: Target binary stream
-    :type stream: BinaryIO
+    :type stream: IO[bytes]
     :param value: ASCII string
     :type value: str
     :raises ValueError: String is longer than 255 characters
