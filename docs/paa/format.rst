@@ -13,6 +13,9 @@ The module supports all PAA types available in the **TexView** application.
 Examples
 --------
 
+Decoding a mipmap
+^^^^^^^^^^^^^^^^^
+
 .. code-block:: python
 
     from armaio.paa import PaaFile, PaaSwizzleTagg, swizzle_channels
@@ -29,6 +32,16 @@ Examples
             swizzle_blue=swizzle.blue
             swizzle_alpha=swizzle.alpha
         )
+
+Using convenience function
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from armaio.paa import PaaFile
+
+    paa = PaaFile.read("texture_co.paa")
+    rgba = paa.decode()
 
 Functions
 ---------
@@ -52,15 +65,14 @@ Decoding
     The implementations of the bit packed decodings are based on the
     `Community Wiki <https://community.bistudio.com/wiki/PAA_File_Format>`_
 
-.. autofunction:: decode_rgba8888
-.. autofunction:: decode_rgba5551
-.. autofunction:: decode_rgba4444
-.. autofunction:: decode_ia88
+.. autofunction:: decode_argb8888
+.. autofunction:: decode_argb1555
+.. autofunction:: decode_argb4444
+.. autofunction:: decode_ai88
 
 Utilities
 ^^^^^^^^^
 
-.. autofunction:: reverse_row_order
 .. autofunction:: swizzle_channels
 
 Exceptions
@@ -109,3 +121,4 @@ Classes
     :member-order: groupwise
 .. autoclass:: PaaFile
     :members:
+    :member-order: groupwise

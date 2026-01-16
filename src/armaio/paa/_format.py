@@ -8,7 +8,9 @@ import struct
 from enum import IntEnum
 from typing import Self, TypeVar, IO
 from abc import ABC, abstractmethod
-from math import floor
+
+import numpy as np
+from numpy import typing as npt
 
 from .. import binary
 from ..compression import (
@@ -16,10 +18,10 @@ from ..compression import (
     lzss_decompress
 )
 from ._encoding import (
-    decode_rgba8888,
-    decode_rgba5551,
-    decode_rgba4444,
-    decode_ia88,
+    decode_argb8888,
+    decode_argb1555,
+    decode_argb4444,
+    decode_ai88,
     decode_dxt1,
     decode_dxt5
 )
@@ -48,11 +50,11 @@ class PaaFormat(IntEnum):
     """
     DXT5 = 0xff05
     """S3TC BC3/DXT5 compressed."""
-    RGBA4444 = 0x4444
+    ARGB4444 = 0x4444
     """4-bit RGBA channels."""
-    RGBA5551 = 0x1555
+    ARGB1555 = 0x1555
     """5-bit RGB channels with 1-bit alpha."""
-    RGBA8888 = 0x8888
+    ARGB8888 = 0x8888
     """8-bit RGBA channels."""
     GRAY = 0x8080
     """8-bit gray with 8-bit alpha."""
@@ -658,7 +660,7 @@ class PaaMipmap():
     def decode(
         self,
         format: PaaFormat
-    ) -> bytes:
+    ) -> npt.NDArray[np.uint8]:
         """
         Decodes the encoded mipmap pixel data according to the given format.
 
@@ -669,7 +671,7 @@ class PaaMipmap():
         :type format: PaaFormat
         :raises PaaError: Unsupported PAA format
         :return: Decoded RGBA data
-        :rtype: bytes
+        :rtype: npt.NDArray[np.uint8]
         """
         data: bytes = self._raw
         match format:
@@ -685,9 +687,9 @@ class PaaMipmap():
                 _, data = lzo1x_decompress(data, lzo_expected)
 
             case (
-                PaaFormat.RGBA8888
-                | PaaFormat.RGBA5551
-                | PaaFormat.RGBA4444
+                PaaFormat.ARGB8888
+                | PaaFormat.ARGB1555
+                | PaaFormat.ARGB4444
                 | PaaFormat.GRAY
             ):
                 expected = self.width * self.height * 2
@@ -702,14 +704,14 @@ class PaaMipmap():
                 return decode_dxt1(self.width, self.height, data)
             case PaaFormat.DXT5:
                 return decode_dxt5(self.width, self.height, data)
-            case PaaFormat.RGBA8888:
-                return decode_rgba8888(self.width, self.height, data)
-            case PaaFormat.RGBA5551:
-                return decode_rgba5551(self.width, self.height, data)
-            case PaaFormat.RGBA4444:
-                return decode_rgba4444(self.width, self.height, data)
+            case PaaFormat.ARGB8888:
+                return decode_argb8888(self.width, self.height, data)
+            case PaaFormat.ARGB1555:
+                return decode_argb1555(self.width, self.height, data)
+            case PaaFormat.ARGB4444:
+                return decode_argb4444(self.width, self.height, data)
             case PaaFormat.GRAY:
-                return decode_ia88(self.width, self.height, data)
+                return decode_ai88(self.width, self.height, data)
 
         raise PaaError(
             f"Unsupported format: {format.name}"
@@ -869,51 +871,44 @@ class PaaFile():
 
         return None
 
+    def decode(
+        self,
+        mipmap: int = 0
+    ) -> npt.NDArray[np.uint8]:
+        """
+        Decodes a specific mipmap of the PAA.
 
-def reverse_row_order(
-    width: int,
-    height: int,
-    data: bytes | bytearray,
-) -> bytes:
-    """
-    Reverses the row order in decoded RGBA data.
+        Channel swizzling is performed if relevant metadata is present in the
+        file. Alpha mode metadata is ignored.
 
-    :param width: Texture width in pixels
-    :type width: int
-    :param height: Texture height in pixels
-    :type height: int
-    :param data: Row flattened pixel data array
-    :type data: bytes | bytearray
-    :return: Pixel data with reveresed row order
-    :rtype: bytes
-    """
-    assert len(data) == (width * height * 4)
+        :param mipmap: Index of the mipmap to decode, defaults to 0
+        :type mipmap: int, optional
+        :return: Decoded RGBA data
+        :rtype: npt.NDArray[np.uint8]
+        """
+        mip = self.mipmaps[mipmap]
+        data = mip.decode(self.format)
+        swizzle = self.get_tagg(PaaSwizzleTagg)
+        if swizzle:
+            data = swizzle_channels(
+                data,
+                swizzle_red=swizzle.red,
+                swizzle_green=swizzle.green,
+                swizzle_blue=swizzle.blue,
+                swizzle_alpha=swizzle.alpha
+            )
 
-    new = bytearray(data)
-    for i in range(floor(height / 2)):
-        new[
-            (height-i-1)*width*4: (height-i)*width*4
-        ] = data[
-            i*width*4: (i+1)*width*4
-        ]
-
-        new[
-            i*width*4: (i+1)*width*4
-        ] = data[
-            (height-i-1)*width*4: (height-i)*width*4
-        ]
-
-    return bytes(new)
+        return data
 
 
 def swizzle_channels(
-    data: bytes | bytearray,
+    data: npt.NDArray[np.uint8],
     *,
     swizzle_red: PaaSwizzle = PaaSwizzle.RED,
     swizzle_green: PaaSwizzle = PaaSwizzle.GREEN,
     swizzle_blue: PaaSwizzle = PaaSwizzle.BLUE,
     swizzle_alpha: PaaSwizzle = PaaSwizzle.ALPHA,
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Process swizzling commands on decoded RGBA data.
 
@@ -921,7 +916,16 @@ def swizzle_channels(
 
     .. code-block:: python
 
-        data = b"\\xff\\x00\\xfc\\xff"
+        data = np.stack(
+            (
+                np.zeros((16, 16), dtype=np.uint8),
+                np.zeros((16, 16), dtype=np.uint8),
+                np.zeros((16, 16), dtype=np.uint8),
+                np.ones((16, 16), dtype=np.uint8)
+            ),
+            2,
+            dtype=np.uint8
+        )
 
         data = swizzle_channels(
             data,
@@ -930,7 +934,7 @@ def swizzle_channels(
         )
 
     :param data: Decoded RGBA data
-    :type data: bytes | bytearray
+    :type data: npt.NDArray[np.uint8]
     :param swizzle_red: Red swizzle, defaults to PaaSwizzle.RED
     :type swizzle_red: PaaSwizzle, optional
     :param swizzle_green: Green swizzle, defaults to PaaSwizzle.GREEN
@@ -940,10 +944,9 @@ def swizzle_channels(
     :param swizzle_alpha: Alpha swizzle, defaults to PaaSwizzle.ALPHA
     :type swizzle_alpha: PaaSwizzle, optional
     :return: Swizzled RGBA data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
-    output = bytearray(data)
-    size = len(data)
+    output = data.copy()
 
     for command, channel in zip(
         (
@@ -973,15 +976,13 @@ def swizzle_channels(
                 | PaaSwizzle.GREEN
                 | PaaSwizzle.BLUE
             ):
-                for i in range(0, size, 4):
-                    output[i + to_channel] = data[i + from_channel]
+                output[:, :, to_channel] = data[:, :, from_channel]
             case (
                 PaaSwizzle.INVERTED_ALPHA
                 | PaaSwizzle.INVERTED_RED
                 | PaaSwizzle.INVERTED_GREEN
                 | PaaSwizzle.INVERTED_BLUE
             ):
-                for i in range(0, size, 4):
-                    output[i + to_channel] = 255 - data[i + from_channel]
+                output[:, :, to_channel] = 255 - data[:, :, from_channel]
 
-    return bytes(output)
+    return output

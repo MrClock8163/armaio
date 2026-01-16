@@ -7,23 +7,22 @@ author = 'MrClock'
 version = ".".join(__version__.split(".")[0:2])
 release = __version__
 
-
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.linkcode",
     "notfound.extension",
-    "sphinx_last_updated_by_git"
+    "sphinx_last_updated_by_git",
+    "sphinx_copybutton"
 ]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "pillow": ("https://pillow.readthedocs.io/en/latest", None)
+    "pillow": ("https://pillow.readthedocs.io/en/latest", None),
+    "numpy": ("https://numpy.org/doc/stable", None)
 }
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
 
 html_theme = 'furo'
 html_static_path = ['_static']
@@ -33,18 +32,12 @@ nitpicky = True
 nitpick_ignore = {
     ("py:class", "_T"),
     ("py:class", "optional"),
-    ("py:class", "StrOrBytesPath")
+    ("py:class", "StrOrBytesPath"),
+    ("py:class", "Image.Image")
 }
-
-
-# GitHub source linking
-def linkcode_resolve(domain: str, info: dict[str, str]) -> str | None:
-    if domain != 'py':
-        return None
-    if not info['module']:
-        return None
-    filename = info['module'].replace('.', '/')
-    return (
-        "https://github.com/MrClock8163/"
-        f"armaio/tree/main/src/{filename:s}.py"
-    )
+nitpick_ignore_regex = {
+    ("py:class", r".*numpy.*"),
+    ("py:class", r".*np.*"),
+    ("py:class", r".*npt.*"),
+    ("py:class", r".*_T"),
+}

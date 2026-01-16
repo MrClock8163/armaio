@@ -11,7 +11,9 @@ authors = [
 description = "IO modules for handling Arma 3 file formats."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy>=1.24.3"
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -59,6 +61,7 @@ documentation = [
     "sphinx ~= 9.0.0",
     "sphinx-notfound-page ~= 1.1.0",
     "sphinx-last-updated-by-git ~= 0.3.8",
+    "sphinx-copybutton~=0.5.2",
     "furo == 2025.12.19"
 ]
 

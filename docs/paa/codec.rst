@@ -1,8 +1,8 @@
 .. py:module:: armaio.paa.pillow
 .. py:currentmodule:: armaio.paa.pillow
 
-PAA codec for Pillow
-====================
+PAA utilities for Pillow
+========================
 
 .. warning::
 
@@ -19,31 +19,18 @@ PAA codec for Pillow
 
 The `Pillow <https://pillow.readthedocs.io>`_ package is a widely used image
 manipulation library for Python. It provides support for a wide range of
-image formats out of the box. It also comes with a plugin system that can be
-used to add support for new formats. The :py:mod:`armaio.paa.pillow` module
-provides such a plugin for Arma 3 PAA files.
-
-Normally, only the plugin registration function needs to be imported. After
-the codec plugin is registered, the PAA files can be manipulated with the
-`Pillow` utilities.
+image formats out of the box. The :py:mod:`armaio.paa.pillow` module
+provides utilities to deal with Arma 3 PAA files.
 
 .. code-block:: python
 
     from PIL import Image
-    from armaio.paa.pillow import register_paa_codec
+    from armaio.paa.pillow import open_paa_image
 
-    register_paa_codec()
-
-    with Image.open("texture_co.paa") as im:
+    with open_paa_image("texture_co.paa") as im:
         im.show()
 
 Functions
 ---------
 
-.. autofunction:: register_paa_codec
-
-Classes
--------
-
-.. autoclass:: PaaImageFile
-    :members:
+.. autofunction:: open_paa_image

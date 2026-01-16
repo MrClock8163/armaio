@@ -1,5 +1,3 @@
-from PIL import Image
-
 from armaio.paa import (
     PaaFile,
     PaaFormat,
@@ -9,7 +7,7 @@ from armaio.paa import (
     PaaOffsetTagg,
     PaaFlagTagg
 )
-from armaio.paa.pillow import register_paa_codec
+from armaio.paa.pillow import open_paa_image
 
 
 def test_reading() -> None:
@@ -43,51 +41,49 @@ def test_reading() -> None:
 
 
 def test_decoding() -> None:
-    register_paa_codec()
-
-    with Image.open("tests/data/texture_co.paa") as im:
+    with open_paa_image("tests/data/texture_co.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
         assert len(rgb) == 4
         assert rgb == (255, 200, 99, 255)
 
-    with Image.open("tests/data/texture_ca.paa") as im:
+    with open_paa_image("tests/data/texture_ca.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
         assert len(rgb) == 4
         assert rgb == (255, 200, 101, 127)
 
-    with Image.open("tests/data/texture_big_ca.paa") as im:
+    with open_paa_image("tests/data/texture_big_ca.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
         assert len(rgb) == 4
         assert rgb == (255, 200, 101, 127)
 
-    with Image.open("tests/data/texture_nohq.paa") as im:
+    with open_paa_image("tests/data/texture_nohq.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGB"
         assert len(rgb) == 3
         assert rgb == (127, 127, 255)
 
-    with Image.open("tests/data/texture_gs.paa") as im:
+    with open_paa_image("tests/data/texture_gs.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
         assert len(rgb) == 4
         assert rgb == (205, 205, 205, 127)
 
-    with Image.open("tests/data/texture_4444.paa") as im:
+    with open_paa_image("tests/data/texture_4444.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
         assert len(rgb) == 4
         assert rgb == (255, 204, 102, 119)
 
-    with Image.open("tests/data/texture_1555.paa") as im:
+    with open_paa_image("tests/data/texture_1555.paa") as im:
         rgb = im.getpixel((0, 0))
         assert isinstance(rgb, tuple)
         assert im.mode == "RGBA"
