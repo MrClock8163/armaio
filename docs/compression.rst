@@ -17,9 +17,6 @@ Exceptions
 Functions
 ---------
 
-Generic
-^^^^^^^
-
 .. note::
 
     The LZO1X decompression was implemented based on the format documentation

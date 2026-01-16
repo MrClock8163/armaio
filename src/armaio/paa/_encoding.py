@@ -87,7 +87,7 @@ def decode_argb4444(
     data: bytes | bytearray
 ) -> npt.NDArray[np.uint8]:
     """
-    Decodes texture data encoded as 5-bit RGBA (ARGB4444).
+    Decodes texture data encoded as 4-bit RGBA (ARGB4444).
 
     The source data is expected to be packed into one 16-bit unsigned integer
     per pixel.

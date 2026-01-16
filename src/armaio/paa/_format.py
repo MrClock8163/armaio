@@ -878,8 +878,8 @@ class PaaFile():
         """
         Decodes a specific mipmap of the PAA.
 
-        Channel swizzling is parformed if relevant metadata is present in the
-        file.
+        Channel swizzling is performed if relevant metadata is present in the
+        file. Alpha mode metadata is ignored.
 
         :param mipmap: Index of the mipmap to decode, defaults to 0
         :type mipmap: int, optional
