@@ -1,12 +1,16 @@
 from io import BytesIO
 import struct
+from array import array
+
+import numpy as np
+from numpy import typing as npt
 
 
-def decode_rgba8888(
+def decode_argb8888(
     width: int,
     height: int,
     data: bytes | bytearray
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data encoded as 8-bit RGBA (``ARGB8888``).
 
@@ -22,7 +26,7 @@ def decode_rgba8888(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
     size = width * height * 4
     output = bytearray(size)
@@ -33,14 +37,17 @@ def decode_rgba8888(
         output[i + 1] = data[i + 1]
         output[i + 2] = data[i]
 
-    return bytes(output)
+    return np.frombuffer(
+        output,
+        dtype=np.uint8
+    ).reshape((height, width, 4))
 
 
-def decode_rgba5551(
+def decode_argb1555(
     width: int,
     height: int,
     data: bytes | bytearray
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data encoded as 5-bit RGB with binary alpha (ARGB1555).
 
@@ -56,7 +63,7 @@ def decode_rgba5551(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
     output = bytearray(width * height * 4)
 
@@ -68,14 +75,17 @@ def decode_rgba5551(
         output[pidx + 1] = round((argb >> 5 & 0b11111) / 0b11111 * 255)
         output[pidx + 2] = round((argb & 0b11111) / 0b11111 * 255)
 
-    return bytes(output)
+    return np.frombuffer(
+        output,
+        dtype=np.uint8
+    ).reshape((height, width, 4))
 
 
-def decode_rgba4444(
+def decode_argb4444(
     width: int,
     height: int,
     data: bytes | bytearray
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data encoded as 5-bit RGBA (ARGB4444).
 
@@ -91,7 +101,7 @@ def decode_rgba4444(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
     output = bytearray(width * height * 4)
 
@@ -104,14 +114,17 @@ def decode_rgba4444(
         output[pidx + 1] = round((gb >> 4) / 0b1111 * 255)
         output[pidx + 2] = round((gb & 0b1111) / 0b1111 * 255)
 
-    return bytes(output)
+    return np.frombuffer(
+        output,
+        dtype=np.uint8
+    ).reshape((height, width, 4))
 
 
-def decode_ia88(
+def decode_ai88(
     width: int,
     height: int,
     data: bytes | bytearray
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data encoded as 8-bit grayscale (intensity) with 8-bit
     alpha (AI88).
@@ -128,7 +141,7 @@ def decode_ia88(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
     output = bytearray(width * height * 4)
 
@@ -141,7 +154,10 @@ def decode_ia88(
         output[pidx + 1] = intensity
         output[pidx + 2] = intensity
 
-    return bytes(output)
+    return np.frombuffer(
+        output,
+        dtype=np.uint8
+    ).reshape((height, width, 4))
 
 
 class DxtError(Exception):
@@ -155,7 +171,7 @@ def decode_dxt1(
     width: int,
     height: int,
     data: bytes | bytearray,
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data compressed with the S3TC DXT1/BC1 algorithm.
 
@@ -173,7 +189,7 @@ def decode_dxt1(
         raise DxtError(f"Unexpected resolution: {width} x {height}")
 
     stream = BytesIO(data)
-    output = bytearray(width * height * 4)
+    output = array('f', bytearray(width * height * 4 * 4))
     struct_block = struct.Struct('<HHI')
 
     # Interpolation coefficients
@@ -183,7 +199,7 @@ def decode_dxt1(
     block_count_w = width // 4
     block_count_h = height // 4
 
-    a0 = a1 = a2 = 1
+    a0 = a1 = a2 = 1.0
 
     # Decompression of blocks from left->right, top->bottom
     v0: int
@@ -212,13 +228,13 @@ def decode_dxt1(
                 g3 = coef1 * g0 + coef0 * g1
                 b3 = coef1 * b0 + coef0 * b1
 
-                a3 = 1
+                a3 = 1.0
             else:
                 r2 = 0.5 * (r0 + r1)
                 g2 = 0.5 * (g0 + g1)
                 b2 = 0.5 * (b0 + b1)
 
-                r3 = g3 = b3 = a3 = 0
+                r3 = g3 = b3 = a3 = 0.0
 
             # Color codes
             codes = (
@@ -241,10 +257,10 @@ def decode_dxt1(
             )
             # Color lookup
             lut = (
-                (round(r0*255), round(g0*255), round(b0*255), round(a0*255)),
-                (round(r1*255), round(g1*255), round(b1*255), round(a1*255)),
-                (round(r2*255), round(g2*255), round(b2*255), round(a2*255)),
-                (round(r3*255), round(g3*255), round(b3*255), round(a3*255))
+                (r0, g0, b0, a0),
+                (r1, g1, b1, a1),
+                (r2, g2, b2, a2),
+                (r3, g3, b3, a3)
             )
 
             # Block interpretation
@@ -264,14 +280,17 @@ def decode_dxt1(
                     output[idx + 2] = b
                     output[idx + 3] = a
 
-    return bytes(output)
+    return (np.frombuffer(
+        output,
+        dtype=np.float32
+    ).reshape((height, width, 4)) * 255).round().astype(np.uint8)
 
 
 def decode_dxt5(
     width: int,
     height: int,
     data: bytes | bytearray,
-) -> bytes:
+) -> npt.NDArray[np.uint8]:
     """
     Decodes texture data compressed with the S3TC DXT5/BC3 algorithm.
 
@@ -283,13 +302,13 @@ def decode_dxt5(
     :type data: bytes
     :raises DxtError: Could not decompress texture due to an error
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: npt.NDArray[np.uint8]
     """
     if width % 4 != 0 or height % 4 != 0:
         raise DxtError(f"Unexpected resolution: {width} x {height}")
 
     stream = BytesIO(data)
-    output = bytearray(width * height * 4)
+    output = array('f', bytearray(width * height * 4 * 4))
     struct_block_color = struct.Struct('<HHI')
     struct_block_alpha = struct.Struct('BB')
     struct_block_atable = struct.Struct('<Q')
@@ -350,7 +369,7 @@ def decode_dxt5(
                 r2 = 0.5 * (r0 + r1)
                 g2 = 0.5 * (g0 + g1)
                 b2 = 0.5 * (b0 + b1)
-                r3 = g3 = b3 = 0
+                r3 = g3 = b3 = 0.0
 
             # Alpha interpolation
             if a0 > a1:
@@ -369,8 +388,8 @@ def decode_dxt5(
                 a3 = acoef35 * a0 + acoef25 * a1
                 a4 = acoef25 * a0 + acoef35 * a1
                 a5 = acoef15 * a0 + acoef45 * a1
-                a6 = 0
-                a7 = 1
+                a6 = 0.0
+                a7 = 1.0
 
             # Color code
             codes = (
@@ -412,21 +431,21 @@ def decode_dxt5(
             )
             # Color lookup
             lut = (
-                (round(r0*255), round(g0*255), round(b0*255)),
-                (round(r1*255), round(g1*255), round(b1*255)),
-                (round(r2*255), round(g2*255), round(b2*255)),
-                (round(r3*255), round(g3*255), round(b3*255))
+                (r0, g0, b0),
+                (r1, g1, b1),
+                (r2, g2, b2),
+                (r3, g3, b3)
             )
             # Alpha lookup
             alut = (
-                round(a0*255),
-                round(a1*255),
-                round(a2*255),
-                round(a3*255),
-                round(a4*255),
-                round(a5*255),
-                round(a6*255),
-                round(a7*255)
+                a0,
+                a1,
+                a2,
+                a3,
+                a4,
+                a5,
+                a6,
+                a7
             )
 
             # Block interpretation
@@ -450,4 +469,7 @@ def decode_dxt5(
                     output[idx + 2] = b
                     output[idx + 3] = a
 
-    return bytes(output)
+    return (np.frombuffer(
+        output,
+        dtype=np.float32
+    ).reshape((height, width, 4)) * 255).round().astype(np.uint8)

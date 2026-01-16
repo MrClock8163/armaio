@@ -11,7 +11,9 @@ authors = [
 description = "IO modules for handling Arma 3 file formats."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy>=1.24.3"
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

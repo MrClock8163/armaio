@@ -1,9 +1,6 @@
 """
 Definitions for reading PAA textures files. File writing is currently not
 supported.
-
-The provided classes and functions can read the structure of DXT1 and DXT5
-compressed PAA texture files.
 """
 
 from ._format import (  # noqa: F401
@@ -20,7 +17,6 @@ from ._format import (  # noqa: F401
     PaaOffsetTagg as PaaOffsetTagg,
     PaaMipmap as PaaMipmap,
     PaaFile as PaaFile,
-    reverse_row_order as reverse_row_order,
     swizzle_channels as swizzle_channels
 )
 
@@ -28,8 +24,8 @@ from ._encoding import (  # noqa: F401
     DxtError as DxtError,
     decode_dxt1 as decode_dxt1,
     decode_dxt5 as decode_dxt5,
-    decode_rgba8888 as decode_rgba8888,
-    decode_rgba5551 as decode_rgba5551,
-    decode_rgba4444 as decode_rgba4444,
-    decode_ia88 as decode_ia88
+    decode_argb8888 as decode_argb8888,
+    decode_argb1555 as decode_argb1555,
+    decode_argb4444 as decode_argb4444,
+    decode_ai88 as decode_ai88
 )
