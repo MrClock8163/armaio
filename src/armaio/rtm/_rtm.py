@@ -1,4 +1,4 @@
-from typing import Self, IO, TypeAlias
+from typing import Self, IO, TypeAlias, NamedTuple
 from types import MappingProxyType
 from bisect import insort
 from struct import pack
@@ -11,7 +11,7 @@ class RtmError(Exception):
         return f"RTM - {super().__str__()}"
 
 
-_TransformMatrix: TypeAlias = tuple[
+RtmMatrix: TypeAlias = tuple[
     tuple[float, float, float, float],
     tuple[float, float, float, float],
     tuple[float, float, float, float],
@@ -28,6 +28,18 @@ _identity: bytes = pack(
 )
 
 
+class RtmProperty(NamedTuple):
+    phase: float
+    name: str
+    value: str
+
+
+class RtmVector(NamedTuple):
+    x: float
+    y: float
+    z: float
+
+
 class RtmFrame:
     def __init__(
         self,
@@ -40,7 +52,7 @@ class RtmFrame:
             )
 
         self._phase = phase
-        self._transforms: dict[str, _TransformMatrix | None] = {
+        self._transforms: dict[str, RtmMatrix | None] = {
             name: None
             for name in bones
         }
@@ -50,23 +62,23 @@ class RtmFrame:
         return self._phase
 
     @property
-    def transforms(self) -> MappingProxyType[str, _TransformMatrix | None]:
+    def transforms(self) -> MappingProxyType[str, RtmMatrix | None]:
         return MappingProxyType(self._transforms)
 
     def set_transform(
         self,
         bone: str,
-        matrix: _TransformMatrix | None
+        matrix: RtmMatrix | None
     ) -> None:
         if bone not in self._transforms:
-            raise RtmError(
+            raise ValueError(
                 f"'{bone}' is not an existing bone in the frame"
             )
 
         self._transforms[bone] = matrix
 
     @staticmethod
-    def _read_matrix(stream: IO[bytes]) -> _TransformMatrix:
+    def _read_matrix(stream: IO[bytes]) -> RtmMatrix:
         m = binary.read_floats(stream, 12)
 
         return (
@@ -77,7 +89,7 @@ class RtmFrame:
         )
 
     @staticmethod
-    def _write_matrix(stream: IO[bytes], m: _TransformMatrix) -> None:
+    def _write_matrix(stream: IO[bytes], m: RtmMatrix) -> None:
         binary.write_float(
             stream,
             m[0][0], m[0][1], m[0][2],
@@ -120,10 +132,10 @@ class RtmFrame:
 
 class RtmFile:
     def __init__(self) -> None:
-        self._props: list[tuple[float, str, str]] = []
+        self._props: list[RtmProperty] = []
         self._source: str | None = None
         self._frames: list[RtmFrame] = []
-        self._motion: tuple[float, float, float] = (0.0, 0.0, 0.0)
+        self._motion: RtmVector = RtmVector(0.0, 0.0, 0.0)
         self._bones: tuple[str, ...] | None = None
 
     @property
@@ -139,18 +151,26 @@ class RtmFile:
         return tuple(sorted(self._props, key=lambda x: x[0]))
 
     def add_property(self, phase: float, name: str, value: str) -> None:
-        insort(self._props, (phase, name, value), key=lambda x: x[0])
+        insort(
+            self._props,
+            RtmProperty(phase, name, value),
+            key=lambda x: x.phase
+        )
 
-    def pop_property(self, idx: int) -> tuple[float, str, str]:
+    def pop_property(self, idx: int) -> RtmProperty:
         return self._props.pop(idx)
 
     @property
-    def motion(self) -> tuple[float, float, float]:
+    def motion(self) -> RtmVector:
         return self._motion
 
     @motion.setter
-    def motion(self, xyz: tuple[float, float, float]) -> None:
-        self._motion = (xyz[0], xyz[1], xyz[2])
+    def motion(self, xyz: tuple[float, float, float] | RtmVector) -> None:
+        if isinstance(xyz, RtmVector):
+            self._motion = xyz
+            return
+
+        self._motion = RtmVector(xyz[0], xyz[1], xyz[2])
 
     @property
     def frames(self) -> tuple[RtmFrame, ...]:
@@ -164,7 +184,7 @@ class RtmFile:
 
         frame_bones = tuple(frame.transforms.keys())
         if frame_bones != self._bones:
-            raise RtmError(
+            raise ValueError(
                 "Cannot add frame with mismatching bones or bone order, "
                 f"expected: {self._bones} got: {frame_bones}"
             )
@@ -185,12 +205,12 @@ class RtmFile:
         if signature == "RTM_MDAT":
             stream.read(4)  # unknown padding
             count_props = binary.read_ulong(stream)
-            props: list[tuple[float, str, str]] = []
+            props: list[RtmProperty] = []
             for _ in range(count_props):
                 phase = binary.read_float(stream)
                 name = binary.read_lascii(stream)
                 value = binary.read_lascii(stream)
-                props.append((phase, name, value))
+                props.append(RtmProperty(phase, name, value))
 
             output._props = sorted(props)
             signature = binary.read_char(stream, 8)
@@ -201,11 +221,11 @@ class RtmFile:
             )
 
         x, y, z = binary.read_floats(stream, 3)
-        output._motion = (x, y, z)
+        output._motion = RtmVector(x, y, z)
 
         count_frames = binary.read_ulong(stream)
         count_bones = binary.read_ulong(stream)
-        bones: tuple[str, ...] = tuple(
+        output._bones = tuple(
             [
                 binary.read_asciiz_field(stream, 32)
                 for _ in range(count_bones)
@@ -213,7 +233,7 @@ class RtmFile:
         )
 
         frames: list[RtmFrame] = [
-            RtmFrame.read(stream, bones)
+            RtmFrame.read(stream, output._bones)
             for _ in range(count_frames)
         ]
 
