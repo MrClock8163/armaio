@@ -4,7 +4,7 @@ from io import BytesIO
 
 from .. import binary
 from ..compression import lzo1x_decompress
-from ._rtm import RtmVector
+from ._rtm import RtmVector, RtmProperty
 
 
 class BmtrError(Exception):
@@ -88,7 +88,7 @@ class BmtrFile:
         self._motion: RtmVector = RtmVector(0.0, 0.0, 0.0)
         self._bones: tuple[str, ...] = ()
         self._frames: tuple[BmtrFrame, ...] = ()
-        self._props: tuple[tuple[float, str, str], ...] = ()
+        self._props: tuple[RtmProperty, ...] = ()
 
     @property
     def source(self) -> str | None:
@@ -111,7 +111,7 @@ class BmtrFile:
         return self._frames
 
     @property
-    def properties(self) -> tuple[tuple[float, str, str], ...]:
+    def properties(self) -> tuple[RtmProperty, ...]:
         return self._props
 
     def _read_phases(
@@ -205,13 +205,13 @@ class BmtrFile:
         if version >= 4:
             stream.read(4)  # always 0
             count_props = binary.read_ulong(stream)
-            props: list[tuple[float, str, str]] = []
+            props: list[RtmProperty] = []
             for _ in range(count_props):
                 stream.read(4)  # always 0xffffffff
                 name = binary.read_asciiz(stream)
                 phase = binary.read_float(stream)
                 value = binary.read_asciiz(stream)
-                props.append((phase, name, value))
+                props.append(RtmProperty(phase, name, value))
 
             output._props = tuple(props)
 
