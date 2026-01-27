@@ -5,3 +5,9 @@ from ._rtm import (  # noqa: F401
     RtmFrame as RtmFrame,
     RtmFile as RtmFile
 )
+from ._bmtr import (  # noqa: F401
+    BmtrError as BmtrError,
+    RtmQuaternion as RtmQuaternion,
+    BmtrFrame as BmtrFrame,
+    BmtrFile as BmtrFile
+)
