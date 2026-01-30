@@ -1,11 +1,16 @@
-from typing import Self, IO, TypeAlias, NamedTuple
+from typing import Self, IO, cast
 from types import MappingProxyType
 from bisect import insort
 from struct import pack
 
+from numpy import matrix, float64
+from numpy.typing import NDArray
+
 from .. import binary
 from ._bmtr import BmtrFile, BmtrFrame
 from ._common import (
+    Bone,
+    BoneStructure,
     RtmProperty,
     RtmVector,
     RtmQuaternion,
@@ -16,6 +21,74 @@ from ._common import (
 class RtmError(Exception):
     def __str__(self) -> str:
         return f"RTM - {super().__str__()}"
+
+
+def _structure_to_bones_parents(
+    skeleton: BoneStructure,
+    parent: str = ""
+) -> list[Bone]:
+    result: list[Bone] = []
+    if len(skeleton) == 0:
+        return result
+
+    for bone in skeleton:
+        result.append(Bone(bone, parent))
+        result.extend(_structure_to_bones_parents(skeleton[bone], bone))
+
+    return result
+
+
+def _multiply_matrices_np(mat1: RtmMatrix, mat2: RtmMatrix) -> RtmMatrix:
+    result: NDArray[float64] = matrix(mat1) @ matrix(mat2)
+
+    return cast(
+        RtmMatrix,
+        tuple(
+            [tuple(row) for row in result.tolist()]
+        )
+    )
+
+
+def _multiply_matrices(m1: RtmMatrix, m2: RtmMatrix) -> RtmMatrix:
+    return (
+        (
+            m1[0][0]*m2[0][0] + m1[0][1]*m2[1][0]
+            + m1[0][2]*m2[2][0] + m1[0][3]*m2[3][0],
+            m1[0][0]*m2[0][1] + m1[0][1]*m2[1][1]
+            + m1[0][2]*m2[2][1] + m1[0][3]*m2[3][1],
+            m1[0][0]*m2[0][2] + m1[0][1]*m2[1][2]
+            + m1[0][2]*m2[2][2] + m1[0][3]*m2[3][2],
+            m1[0][0]*m2[0][3] + m1[0][1]*m2[1][3]
+            + m1[0][2]*m2[2][3] + m1[0][3]*m2[3][3]
+        ), (
+            m1[1][0]*m2[0][0] + m1[1][1]*m2[1][0]
+            + m1[1][2]*m2[2][0] + m1[1][3]*m2[3][0],
+            m1[1][0]*m2[0][1] + m1[1][1]*m2[1][1]
+            + m1[1][2]*m2[2][1] + m1[1][3]*m2[3][1],
+            m1[1][0]*m2[0][2] + m1[1][1]*m2[1][2]
+            + m1[1][2]*m2[2][2] + m1[1][3]*m2[3][2],
+            m1[1][0]*m2[0][3] + m1[1][1]*m2[1][3]
+            + m1[1][2]*m2[2][3] + m1[1][3]*m2[3][3]
+        ), (
+            m1[2][0]*m2[0][0] + m1[2][1]*m2[1][0]
+            + m1[2][2]*m2[2][0] + m1[2][3]*m2[3][0],
+            m1[2][0]*m2[0][1] + m1[2][1]*m2[1][1]
+            + m1[2][2]*m2[2][1] + m1[2][3]*m2[3][1],
+            m1[2][0]*m2[0][2] + m1[2][1]*m2[1][2]
+            + m1[2][2]*m2[2][2] + m1[2][3]*m2[3][2],
+            m1[2][0]*m2[0][3] + m1[2][1]*m2[1][3]
+            + m1[2][2]*m2[2][3] + m1[2][3]*m2[3][3]
+        ), (
+            m1[3][0]*m2[0][0] + m1[3][1]*m2[1][0]
+            + m1[3][2]*m2[2][0] + m1[3][3]*m2[3][0],
+            m1[3][0]*m2[0][1] + m1[3][1]*m2[1][1]
+            + m1[3][2]*m2[2][1] + m1[3][3]*m2[3][1],
+            m1[3][0]*m2[0][2] + m1[3][1]*m2[1][2]
+            + m1[3][2]*m2[2][2] + m1[3][3]*m2[3][2],
+            m1[3][0]*m2[0][3] + m1[3][1]*m2[1][3]
+            + m1[3][2]*m2[2][3] + m1[3][3]*m2[3][3]
+        )
+    )
 
 
 _identity_bytes: bytes = pack(
@@ -115,6 +188,63 @@ class RtmFrame:
                     stream,
                     mat
                 )
+
+    @staticmethod
+    def _rot_loc_to_matrix(q: RtmQuaternion, v: RtmVector) -> RtmMatrix:
+        m00 = 1 - 2*q.y**2 - 2*q.z**2
+        m01 = 2*q.x*q.y - 2*q.z*q.w
+        m02 = 2*q.x*q.z + 2*q.y*q.w
+        m10 = 2*q.x*q.y + 2*q.z*q.w
+        m11 = 1 - 2*q.x**2 - 2*q.z**2
+        m12 = 2*q.y*q.z - 2*q.x*q.w
+        m20 = 2*q.x*q.z - 2*q.y*q.w
+        m21 = 2*q.y*q.z + 2*q.x*q.w
+        m22 = 1 - 2*q.x**2 - 2*q.y**2
+
+        return (
+            (m00, -m01, m02, 0.0),
+            (-m10, m11, -m12, 0.0),
+            (m20, -m21, m22, 0.0),
+            (-v.x, v.y, -v.z, 1.0)
+        )
+
+    @classmethod
+    def from_binarized(
+        cls,
+        frame_bmtr: BmtrFrame,
+        bones: tuple[str, ...],
+        skeleton: BoneStructure | tuple[Bone, ...]
+    ) -> Self:
+        frame_rtm = cls(frame_bmtr.phase, bones)
+        for bone, transform in frame_bmtr.transforms.items():
+            if transform is None:
+                continue
+
+            rot, loc = transform
+            frame_rtm.set_transform(
+                bone,
+                cls._rot_loc_to_matrix(rot, loc)
+            )
+
+        if isinstance(skeleton, dict):
+            skeleton = tuple(_structure_to_bones_parents(skeleton))
+
+        for item in skeleton:
+            print(item)
+            mat = frame_rtm._transforms.get(item.name)
+            if mat is None:
+                print("@ No matrix")
+                continue
+
+            mat_parent = frame_rtm._transforms.get(item.parent)
+            if mat_parent is None:
+                print(f"@ No parent matrix ({item.parent})")
+                continue
+
+            mat_final = _multiply_matrices(mat, mat_parent)
+            frame_rtm.set_transform(item.name, mat_final)
+
+        return frame_rtm
 
 
 class RtmFile:
@@ -236,6 +366,39 @@ class RtmFile:
         output._source = filepath
 
         return output
+
+    @classmethod
+    def from_binarized(
+        cls,
+        bmtr: BmtrFile,
+        skeleton: BoneStructure | tuple[Bone, ...]
+    ) -> Self:
+        rtm = cls()
+
+        for prop in bmtr.properties:
+            rtm.add_property(
+                prop.phase,
+                prop.name,
+                prop.value
+            )
+
+        rtm._source = bmtr.source
+        rtm._motion = bmtr.motion
+        rtm._bones = bmtr.bones
+
+        if isinstance(skeleton, dict):
+            skeleton = tuple(_structure_to_bones_parents(skeleton))
+
+        for frame_bmtr in bmtr.frames:
+            rtm.add_frame(
+                RtmFrame.from_binarized(
+                    frame_bmtr,
+                    bmtr.bones,
+                    skeleton
+                )
+            )
+
+        return rtm
 
     def write(self, stream: IO[bytes]) -> None:
         if len(self._frames) == 0:
