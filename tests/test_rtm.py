@@ -71,6 +71,19 @@ def test_rtm_creation() -> None:
 
 def test_bmtr_reading() -> None:
     bmtr = BmtrFile.read_file("tests/data/animation_bmtr.rtm")
+    assert len(bmtr.properties) == 2
+    assert len(bmtr.frames) == 2
+    assert bmtr.bones is not None
+    assert len(bmtr.bones) == 4
+    assert bmtr.motion == approx((1.0, 3.0, 2.0))
+
+    frame0 = bmtr.frames[0]
+    transform = frame0.transforms["pelvis"]
+    assert transform is not None
+
+
+def test_bmtr_lzo_reading() -> None:
+    bmtr = BmtrFile.read_file("tests/data/animation_bmtr_lzo.rtm")
     assert len(bmtr.properties) == 0
     assert len(bmtr.frames) == 165
     assert bmtr.bones is not None
