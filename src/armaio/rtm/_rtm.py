@@ -4,6 +4,13 @@ from bisect import insort
 from struct import pack
 
 from .. import binary
+from ._bmtr import BmtrFile, BmtrFrame
+from ._common import (
+    RtmProperty,
+    RtmVector,
+    RtmQuaternion,
+    RtmMatrix
+)
 
 
 class RtmError(Exception):
@@ -11,33 +18,13 @@ class RtmError(Exception):
         return f"RTM - {super().__str__()}"
 
 
-RtmMatrix: TypeAlias = tuple[
-    tuple[float, float, float, float],
-    tuple[float, float, float, float],
-    tuple[float, float, float, float],
-    tuple[float, float, float, float]
-]
-
-
-_identity: bytes = pack(
+_identity_bytes: bytes = pack(
     "<12f",
     1.0, 0.0, 0.0,
     0.0, 1.0, 0.0,
     0.0, 0.0, 1.0,
     0.0, 0.0, 0.0
 )
-
-
-class RtmProperty(NamedTuple):
-    phase: float
-    name: str
-    value: str
-
-
-class RtmVector(NamedTuple):
-    x: float
-    y: float
-    z: float
 
 
 class RtmFrame:
@@ -119,14 +106,14 @@ class RtmFrame:
 
     def write(self, stream: IO[bytes]) -> None:
         binary.write_float(stream, self._phase)
-        for bone, matrix in self._transforms.items():
+        for bone, mat in self._transforms.items():
             binary.write_asciiz_field(stream, bone, 32)
-            if matrix is None:
-                stream.write(_identity)
+            if mat is None:
+                stream.write(_identity_bytes)
             else:
                 self._write_matrix(
                     stream,
-                    matrix
+                    mat
                 )
 
 

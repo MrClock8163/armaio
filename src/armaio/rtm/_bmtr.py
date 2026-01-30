@@ -1,22 +1,15 @@
-from typing import Self, IO, NamedTuple
+from typing import Self, IO
 from types import MappingProxyType
 from io import BytesIO
 
 from .. import binary
 from ..compression import lzo1x_decompress
-from ._rtm import RtmVector, RtmProperty
+from ._common import RtmQuaternion, RtmVector, RtmProperty
 
 
 class BmtrError(Exception):
     def __str__(self) -> str:
         return f"BMTR - {super().__str__()}"
-
-
-class RtmQuaternion(NamedTuple):
-    x: float
-    y: float
-    z: float
-    w: float
 
 
 class BmtrFrame:
