@@ -1,13 +1,16 @@
 from io import BytesIO
 
 from pytest import approx, raises
+from numpy import matrix
+from numpy.linalg import norm
 
 from armaio.rtm import (
     RtmMatrix,
     RtmError,
     RtmFile,
     RtmFrame,
-    BmtrFile
+    BmtrFile,
+    BoneStructure
 )
 
 
@@ -93,3 +96,59 @@ def test_bmtr_lzo_reading() -> None:
     frame0 = bmtr.frames[0]
     transform = frame0.transforms["pelvis"]
     assert transform is not None
+
+
+def test_bmtr_to_rtm() -> None:
+    bmtr = BmtrFile.read_file("tests/data/animation_bmtr.rtm")
+    skeleton: BoneStructure = {
+        "pelvis": {
+            "torso": {
+                "rightarm": {},
+                "leftarm": {}
+            }
+        }
+    }
+    rtm = RtmFile.from_binarized(bmtr, skeleton)
+    rtm_source = RtmFile.read_file("tests/data/animation.rtm")
+
+    assert len(rtm.properties) == len(rtm_source.properties)
+    assert rtm.motion == approx(rtm_source.motion)
+
+    bones = rtm.bones
+    bones_source = rtm_source.bones
+    if bones_source is not None:
+        bones_source = tuple([b.lower() for b in bones_source])
+    assert bones == bones_source
+
+    assert len(rtm.frames) == len(rtm_source.frames)
+
+    error = 0.0
+    for frame1, frame2 in zip(rtm_source.frames, rtm.frames):
+        frame_bones = frame1.transforms.keys()
+        for name in frame_bones:
+            mat1 = frame1.transforms[name]
+            mat2 = frame2.transforms[name.lower()]
+
+            assert (
+                (
+                    mat1 is None
+                    and mat2 is None
+                ) or (
+                    mat1 is not None
+                    and mat2 is not None
+                )
+            )
+
+            if mat1 is None or mat2 is None:
+                continue
+
+            error = max(
+                error,
+                float(
+                    norm(
+                        matrix(mat1) - matrix(mat2)
+                    )
+                )
+            )
+
+    assert error < 0.001
