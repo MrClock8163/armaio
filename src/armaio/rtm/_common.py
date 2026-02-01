@@ -2,12 +2,17 @@ from typing import NamedTuple, TypeAlias
 
 
 class RtmProperty(NamedTuple):
+    """Name-value property."""
     phase: float
+    """Animation phase the property is linked to."""
     name: str
+    """Property name."""
     value: str
+    """Property value."""
 
 
 class RtmQuaternion(NamedTuple):
+    """Quaternion representing a 3D rotation."""
     x: float
     y: float
     z: float
@@ -15,6 +20,7 @@ class RtmQuaternion(NamedTuple):
 
 
 class RtmVector(NamedTuple):
+    """Vector representing a 3D position."""
     x: float
     y: float
     z: float
@@ -26,15 +32,21 @@ RtmMatrix: TypeAlias = tuple[
     tuple[float, float, float, float],
     tuple[float, float, float, float]
 ]
+"""Matrix representing 3D transformation (pre-multiply)."""
 
 
 class Bone(NamedTuple):
+    """Bone data."""
     name: str
+    """Name of the bone."""
     parent: str
+    """Name of the parent bone."""
 
 
 BoneStructure: TypeAlias = dict[str, 'BoneStructure']
+"""Bone hierarchy."""
 BoneSequence: TypeAlias = tuple[Bone, ...]
+"""Bone hierarchy as a sequence."""
 
 
 def _rot_loc_to_matrix(q: RtmQuaternion, v: RtmVector) -> RtmMatrix:

@@ -27,6 +27,14 @@ specific to the Arma 3 game.
     paa/format
     paa/codec
 
+.. toctree::
+    :maxdepth: 1
+    :caption: Animations
+
+    rtm/plain
+    rtm/binarized
+    rtm/skeleton
+
 Indices and tables
 ==================
 

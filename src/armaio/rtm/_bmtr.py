@@ -8,16 +8,30 @@ from ._common import RtmQuaternion, RtmVector, RtmProperty
 
 
 class BmtrError(Exception):
+    """Exception raised upon BMTR reading errors."""
+
     def __str__(self) -> str:
         return f"BMTR - {super().__str__()}"
 
 
 class BmtrFrame:
+    """
+    Animation frame at a given phase, containing the transformation data
+    for all bones.
+    """
+
     def __init__(
         self,
         phase: float,
         bones: tuple[str, ...]
     ) -> None:
+        """
+        :param phase: Animation phase
+        :type phase: float
+        :param bones: Bones animated in the frame
+        :type bones: tuple[str, ...]
+        :raises BmtrError: Duplicate bones
+        """
         if len(set(bones)) != len(bones):
             raise BmtrError(
                 f"Cannot create frame with duplicate bones: {bones}"
@@ -31,6 +45,10 @@ class BmtrFrame:
 
     @property
     def phase(self) -> float:
+        """
+        :return: Animation phase
+        :rtype: float
+        """
         return self._phase
 
     @property
@@ -38,12 +56,24 @@ class BmtrFrame:
         str,
         tuple[RtmQuaternion, RtmVector] | None
     ]:
+        """
+        :return: Bone transformations
+        :rtype: MappingProxyType[str, tuple[RtmQuaternion, RtmVector] | None]
+        """
         return MappingProxyType(self._transforms)
 
     @staticmethod
     def _read_transform(
         stream: IO[bytes]
     ) -> tuple[RtmQuaternion, RtmVector]:
+        """
+        Reads a quaternion-vector pair from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :return: Transformation data
+        :rtype: tuple[RtmQuaternion, RtmVector]
+        """
         q1, q2, q3, q4 = binary.read_shorts(stream, 4)
         quaternion = RtmQuaternion(
             q1 / 16384,
@@ -65,6 +95,18 @@ class BmtrFrame:
         phase: float,
         bones: tuple[str, ...]
     ) -> Self:
+        """
+        Reads an animation frame from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :param phase: Animation phase
+        :type phase: float
+        :param bones: List of expected bones
+        :type bones: tuple[str, ...]
+        :return: Animation frame
+        :rtype: Self
+        """
         output = cls(phase, bones)
         output._transforms = {
             name: cls._read_transform(stream)
@@ -75,6 +117,10 @@ class BmtrFrame:
 
 
 class BmtrFile:
+    """
+    Animation data read from a binarized RTM file.
+    """
+
     def __init__(self) -> None:
         self._source: str | None = None
         self._version: int = 5
@@ -85,26 +131,50 @@ class BmtrFile:
 
     @property
     def source(self) -> str | None:
+        """
+        :return: Path to source file (None if not read from file)
+        :rtype: str | None
+        """
         return self._source
 
     @property
     def version(self) -> int:
+        """
+        :return: Format version
+        :rtype: int
+        """
         return self._version
 
     @property
     def motion(self) -> RtmVector:
+        """
+        :return: Motion vector
+        :rtype: RtmVector
+        """
         return self._motion
 
     @property
     def bones(self) -> tuple[str, ...]:
+        """
+        :return: Bones in the animation
+        :rtype: tuple[str, ...]
+        """
         return self._bones
 
     @property
     def frames(self) -> tuple[BmtrFrame, ...]:
+        """
+        :return: Animation frames
+        :rtype: tuple[RtmFrame, ...]
+        """
         return self._frames
 
     @property
     def properties(self) -> tuple[RtmProperty, ...]:
+        """
+        :return: Phase-linked animation properties
+        :rtype: tuple[tuple[float, str, str], ...]
+        """
         return self._props
 
     def _read_phases(
@@ -112,6 +182,17 @@ class BmtrFile:
         stream: IO[bytes],
         count: int
     ) -> tuple[float, ...]:
+        """
+        Reads frame phase list from a binary stream.
+
+        :param stream: Source binary stream.
+        :type stream: IO[bytes]
+        :param count: Number of phases to read
+        :type count: int
+        :raises BmtrError: Error occured during decompression
+        :return: Animation frame phases
+        :rtype: tuple[float, ...]
+        """
         expected_data = count * 4
         compressed = expected_data >= 1024
         if self.version >= 4:
@@ -141,6 +222,17 @@ class BmtrFile:
         phases: tuple[float, ...],
         bones: tuple[str, ...]
     ) -> None:
+        """
+        Reads animation frames from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :param phases: Animation frame phases
+        :type phases: tuple[float, ...]
+        :param bones: List of expected bones
+        :type bones: tuple[str, ...]
+        :raises BmtrError: Error occured during decompression
+        """
         frames: list[BmtrFrame] = []
         for phase in phases:
             count_bones = binary.read_ulong(stream)
@@ -168,6 +260,15 @@ class BmtrFile:
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
+        """
+        Reads binarized animation data from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :raises BmtrError: Stream is not valid animation data
+        :return: Animation data
+        :rtype: Self
+        """
         signature = binary.read_char(stream, 4)
         if signature != "BMTR":
             raise BmtrError(
@@ -222,6 +323,14 @@ class BmtrFile:
 
     @classmethod
     def read_file(cls, filepath: str) -> Self:
+        """
+        Reads animation data from a binarized RTM file at a given path.
+
+        :param filepath: Path to RTM file
+        :type filepath: str
+        :return: Animation data
+        :rtype: Self
+        """
         with open(filepath, "rb") as file:
             output = cls.read(file)
 
