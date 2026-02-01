@@ -28,9 +28,10 @@ RtmMatrix: TypeAlias = tuple[
 ]
 
 
-BoneStructure = dict[str, 'BoneStructure']
-
-
 class Bone(NamedTuple):
     name: str
     parent: str
+
+
+BoneStructure: TypeAlias = dict[str, 'BoneStructure']
+BoneSequence: TypeAlias = tuple[Bone, ...]

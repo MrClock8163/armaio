@@ -14,5 +14,6 @@ from ._common import (  # noqa: F401
     RtmVector as RtmVector,
     RtmQuaternion as RtmQuaternion,
     Bone as Bone,
-    BoneStructure as BoneStructure
+    BoneStructure as BoneStructure,
+    BoneSequence as BoneSequence
 )

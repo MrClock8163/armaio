@@ -11,6 +11,7 @@ from ._bmtr import BmtrFile, BmtrFrame
 from ._common import (
     Bone,
     BoneStructure,
+    BoneSequence,
     RtmProperty,
     RtmVector,
     RtmQuaternion,
@@ -38,8 +39,8 @@ def _structure_to_bones_parents(
     return result
 
 
-def _multiply_matrices_np(mat1: RtmMatrix, mat2: RtmMatrix) -> RtmMatrix:
-    result: NDArray[float64] = matrix(mat1) @ matrix(mat2)
+def _multiply_matrices_np(m1: RtmMatrix, m2: RtmMatrix) -> RtmMatrix:
+    result: NDArray[float64] = matrix(m1) @ matrix(m2)
 
     return cast(
         RtmMatrix,
@@ -213,7 +214,7 @@ class RtmFrame:
         cls,
         frame_bmtr: BmtrFrame,
         bones: tuple[str, ...],
-        skeleton: BoneStructure | tuple[Bone, ...]
+        skeleton: BoneStructure | BoneSequence
     ) -> Self:
         frame_rtm = cls(frame_bmtr.phase, bones)
         for bone, transform in frame_bmtr.transforms.items():
@@ -230,15 +231,12 @@ class RtmFrame:
             skeleton = tuple(_structure_to_bones_parents(skeleton))
 
         for item in skeleton:
-            print(item)
             mat = frame_rtm._transforms.get(item.name)
             if mat is None:
-                print("@ No matrix")
                 continue
 
             mat_parent = frame_rtm._transforms.get(item.parent)
             if mat_parent is None:
-                print(f"@ No parent matrix ({item.parent})")
                 continue
 
             mat_final = _multiply_matrices(mat, mat_parent)
@@ -371,7 +369,7 @@ class RtmFile:
     def from_binarized(
         cls,
         bmtr: BmtrFile,
-        skeleton: BoneStructure | tuple[Bone, ...]
+        skeleton: BoneStructure | BoneSequence
     ) -> Self:
         rtm = cls()
 
