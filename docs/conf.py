@@ -41,3 +41,9 @@ nitpick_ignore_regex = {
     ("py:class", r".*npt.*"),
     ("py:class", r".*_T"),
 }
+
+autodoc_default_options = {
+    "member-order": "groupwise",
+    "members": True
+}
+autoclass_content = "both"

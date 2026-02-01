@@ -723,7 +723,7 @@ _T = TypeVar("_T", bound=PaaTagg)
 
 class PaaFile():
     """
-    Contaier for PAA texture format data.
+    Container for PAA texture format data.
     """
 
     def __init__(self) -> None:

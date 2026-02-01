@@ -5,8 +5,8 @@ PAA format
 ==========
 
 The :py:mod:`armaio.paa` package provides facilities for reading the PAA
-texture format. The implementation are based on the information on the
-`Community Wiki PAA page <https://community.bistudio.com/wiki/PAA_File_Format>`_
+texture format. The implementations are based on the information on the
+`Community Wiki PAA page <https://community.bistudio.com/wiki/PAA_File_Format>`_.
 
 The module supports all PAA types available in the **TexView** application.
 
@@ -85,40 +85,18 @@ Enumerations
 ------------
 
 .. autoclass:: PaaFormat
-    :members:
-    :member-order: bysource
 .. autoclass:: PaaAlphaFlag
-    :members:
-    :member-order: bysource
 .. autoclass:: PaaSwizzle
-    :members:
-    :member-order: bysource
 
 Classes
 -------
 
 .. autoclass:: PaaTagg
 .. autoclass:: PaaUnknownTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaAverageColorTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaMaxColorTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaFlagTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaSwizzleTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaOffsetTagg
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaMipmap
-    :members:
-    :member-order: groupwise
 .. autoclass:: PaaFile
-    :members:
-    :member-order: groupwise
