@@ -176,7 +176,7 @@ class RtmFrame:
     def transforms(self) -> MappingProxyType[str, RtmMatrix | None]:
         """
         :return: Bone transformations
-        :rtype: MappingProxyType[str, RtmMatrix | None]
+        :rtype: ~types.MappingProxyType[str, RtmMatrix | None]
         """
         return MappingProxyType(self._transforms)
 

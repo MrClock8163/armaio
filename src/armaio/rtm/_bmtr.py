@@ -58,7 +58,8 @@ class BmtrFrame:
     ]:
         """
         :return: Bone transformations
-        :rtype: MappingProxyType[str, tuple[RtmQuaternion, RtmVector] | None]
+        :rtype: ~types.MappingProxyType[str,
+            tuple[RtmQuaternion, RtmVector] | None]
         """
         return MappingProxyType(self._transforms)
 
