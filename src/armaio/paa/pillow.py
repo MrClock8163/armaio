@@ -19,7 +19,7 @@ def open_paa_image(
     :param mipmap: Index of mipmap to open, defaults to 0
     :type mipmap: int, optional
     :return: Decoded image
-    :rtype: Image.Image
+    :rtype: ~PIL.Image.Image
     """
     paa = PaaFile.read_file(path)
     alpha = paa.is_alpha()

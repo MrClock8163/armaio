@@ -26,7 +26,7 @@ def decode_argb8888(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     size = width * height * 4
     output = bytearray(size)
@@ -63,7 +63,7 @@ def decode_argb1555(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     output = bytearray(width * height * 4)
 
@@ -101,7 +101,7 @@ def decode_argb4444(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     output = bytearray(width * height * 4)
 
@@ -141,7 +141,7 @@ def decode_ai88(
     :param data: Encoded binary data
     :type data: bytes | bytearray
     :return: Decoded RGBA image data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     output = bytearray(width * height * 4)
 
@@ -183,7 +183,7 @@ def decode_dxt1(
     :type data: bytes
     :raises DxtError: Could not decompress texture due to an error
     :return: Decoded RGBA image data
-    :rtype: bytes
+    :rtype: ~numpy.ndarray
     """
     if width % 4 != 0 or height % 4 != 0:
         raise DxtError(f"Unexpected resolution: {width} x {height}")
@@ -302,7 +302,7 @@ def decode_dxt5(
     :type data: bytes
     :raises DxtError: Could not decompress texture due to an error
     :return: Decoded RGBA image data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     if width % 4 != 0 or height % 4 != 0:
         raise DxtError(f"Unexpected resolution: {width} x {height}")

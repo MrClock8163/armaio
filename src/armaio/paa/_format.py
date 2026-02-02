@@ -671,7 +671,7 @@ class PaaMipmap():
         :type format: PaaFormat
         :raises PaaError: Unsupported PAA format
         :return: Decoded RGBA data
-        :rtype: npt.NDArray[np.uint8]
+        :rtype: ~numpy.ndarray
         """
         data: bytes = self._raw
         match format:
@@ -723,7 +723,7 @@ _T = TypeVar("_T", bound=PaaTagg)
 
 class PaaFile():
     """
-    Contaier for PAA texture format data.
+    Container for PAA texture format data.
     """
 
     def __init__(self) -> None:
@@ -884,7 +884,7 @@ class PaaFile():
         :param mipmap: Index of the mipmap to decode, defaults to 0
         :type mipmap: int, optional
         :return: Decoded RGBA data
-        :rtype: npt.NDArray[np.uint8]
+        :rtype: ~numpy.ndarray
         """
         mip = self.mipmaps[mipmap]
         data = mip.decode(self.format)
@@ -934,7 +934,7 @@ def swizzle_channels(
         )
 
     :param data: Decoded RGBA data
-    :type data: npt.NDArray[np.uint8]
+    :type data: ~numpy.ndarray
     :param swizzle_red: Red swizzle, defaults to PaaSwizzle.RED
     :type swizzle_red: PaaSwizzle, optional
     :param swizzle_green: Green swizzle, defaults to PaaSwizzle.GREEN
@@ -944,7 +944,7 @@ def swizzle_channels(
     :param swizzle_alpha: Alpha swizzle, defaults to PaaSwizzle.ALPHA
     :type swizzle_alpha: PaaSwizzle, optional
     :return: Swizzled RGBA data
-    :rtype: npt.NDArray[np.uint8]
+    :rtype: ~numpy.ndarray
     """
     output = data.copy()
 
