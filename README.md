@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="https://raw.githubusercontent.com/mrclock8163/armaio/main/docs/_static/favicon.svg" alt="ArmaIO logo" width="100">
+<img src="https://raw.githubusercontent.com/mrclock8163/armaio/main/docs/_static/favicon.svg" alt="ArmaIO logo" width="200">
 </h1><br>
 
 [![PyPI - Version](https://img.shields.io/pypi/v/armaio)](https://pypi.org/project/armaio/)

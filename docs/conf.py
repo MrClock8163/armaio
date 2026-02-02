@@ -12,7 +12,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "notfound.extension",
     "sphinx_last_updated_by_git",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
+    "sphinx_mdinclude"
 ]
 
 intersphinx_mapping = {

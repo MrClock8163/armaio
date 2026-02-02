@@ -47,6 +47,11 @@ more complex authoring application built on top of it.
 
 .. toctree::
     :maxdepth: 1
+
+    changelog
+
+.. toctree::
+    :maxdepth: 1
     :caption: External references
 
     Source code <https://github.com/MrClock8163/armaio>
