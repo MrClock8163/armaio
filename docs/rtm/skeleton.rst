@@ -1,3 +1,5 @@
+.. py:currentmodule:: armaio.rtm
+
 Bone structure
 ==============
 
@@ -42,6 +44,8 @@ child bones, similarly further mapping to their respective child bones.
 
 This representation clearly shows the hierarchy of the bones.
 
+.. autodata:: BoneStructure
+
 Sequence format
 ^^^^^^^^^^^^^^^
 
@@ -78,3 +82,6 @@ referenced before it is defined in the list.
 
     Incorrect bone order will result in incorrectly converted
     transformation data.
+
+.. autoclass:: Bone
+.. autodata:: BoneSequence

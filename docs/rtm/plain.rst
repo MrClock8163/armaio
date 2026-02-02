@@ -65,9 +65,6 @@ Classes
 .. autodata:: RtmMatrix
 .. autoclass:: RtmVector
 .. autoclass:: RtmQuaternion
-.. autoclass:: Bone
-.. autodata:: BoneStructure
-.. autodata:: BoneSequence
 
 .. autoclass:: RtmFrame
 .. autoclass:: RtmFile
