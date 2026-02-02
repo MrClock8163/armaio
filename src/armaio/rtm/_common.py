@@ -51,7 +51,7 @@ BoneSequence: TypeAlias = tuple[Bone, ...]
 
 def rot_loc_to_matrix(q: RtmQuaternion, v: RtmVector) -> RtmMatrix:
     """
-    Convertes a quaternion-vector pair to matrix representation.
+    Converts a quaternion-vector pair to matrix representation.
 
     :param q: Orientation
     :type q: RtmQuaternion

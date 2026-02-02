@@ -298,9 +298,9 @@ class RtmFrame:
 
         .. note::
 
-            Plain animations store transformations are absolute 3D
+            Plain animations store transformations as absolute 3D
             transformation matrices, while the binarized format stores them
-            as relative quaternion-vector pairs. Therefore the perform the
+            as relative quaternion-vector pairs. Therefore to perform the
             conversion, the skeleton bone hierarchy must be known.
 
         :param frame_bmtr: Binarized (BMTR) frame
