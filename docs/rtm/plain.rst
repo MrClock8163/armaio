@@ -58,6 +58,12 @@ Exceptions
 
 .. autoclass:: RtmError
 
+
+Functions
+---------
+
+.. autofunction:: rot_loc_to_matrix
+
 Classes
 -------
 

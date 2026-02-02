@@ -15,5 +15,6 @@ from ._common import (  # noqa: F401
     RtmQuaternion as RtmQuaternion,
     Bone as Bone,
     BoneStructure as BoneStructure,
-    BoneSequence as BoneSequence
+    BoneSequence as BoneSequence,
+    rot_loc_to_matrix as rot_loc_to_matrix
 )

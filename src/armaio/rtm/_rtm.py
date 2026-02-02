@@ -15,7 +15,7 @@ from ._common import (
     RtmProperty,
     RtmVector,
     RtmMatrix,
-    _rot_loc_to_matrix
+    rot_loc_to_matrix
 )
 
 
@@ -320,7 +320,7 @@ class RtmFrame:
             rot, loc = transform
             frame_rtm.set_transform(
                 bone,
-                _rot_loc_to_matrix(rot, loc)
+                rot_loc_to_matrix(rot, loc)
             )
 
         if isinstance(skeleton, dict):

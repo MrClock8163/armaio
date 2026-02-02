@@ -49,7 +49,7 @@ BoneSequence: TypeAlias = tuple[Bone, ...]
 """Bone hierarchy as a sequence."""
 
 
-def _rot_loc_to_matrix(q: RtmQuaternion, v: RtmVector) -> RtmMatrix:
+def rot_loc_to_matrix(q: RtmQuaternion, v: RtmVector) -> RtmMatrix:
     """
     Convertes a quaternion-vector pair to matrix representation.
 
