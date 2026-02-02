@@ -1,10 +1,8 @@
-from typing import Self, IO, cast
+from typing import Self, IO
 from types import MappingProxyType
 from bisect import insort
 from struct import pack
 
-from numpy import matrix, float64
-from numpy.typing import NDArray
 
 from .. import binary
 from ._bmtr import BmtrFile, BmtrFrame
@@ -52,30 +50,14 @@ def _structure_to_bones_parents(
     return result
 
 
-def _multiply_matrices_np(m1: RtmMatrix, m2: RtmMatrix) -> RtmMatrix:
-    """
-    Multiplies two matrices with NumPy.
-
-    :param m1: Left matrix
-    :type m1: RtmMatrix
-    :param m2: Right matrix
-    :type m2: RtmMatrix
-    :return: Multiplication result
-    :rtype: RtmMatrix
-    """
-    result: NDArray[float64] = matrix(m1) @ matrix(m2)
-
-    return cast(
-        RtmMatrix,
-        tuple(
-            [tuple(row) for row in result.tolist()]
-        )
-    )
-
-
 def _multiply_matrices(m1: RtmMatrix, m2: RtmMatrix) -> RtmMatrix:
     """
     Multiplies two 3x3 matrices with pure Python implementation.
+
+    .. note::
+
+        For this specific case, the pure python implementation appears
+        to be faster than using NumPy.
 
     :param m1: Left matrix
     :type m1: RtmMatrix
