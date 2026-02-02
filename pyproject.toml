@@ -38,6 +38,7 @@ keywords = ["arma3", "bi", "p3d", "rtm", "paa"]
 [project.urls]
 Repository = "https://github.com/MrClock8163/armaio"
 Issues = "https://github.com/MrClock8163/armaio/issues"
+Changelog = "https://github.com/MrClock8163/armaio/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 all = ["armaio[pillow]"]

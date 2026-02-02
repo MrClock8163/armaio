@@ -1,0 +1,22 @@
+# Changelog
+
+All notable changes in the ArmaIO project will be documented in this
+file.
+
+The project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## v0.1.0 (unreleased)
+
+### Added
+
+- Added LZO1X decompression
+- Added LZSS decompression
+- Added support for PAA reading
+- Added support for plain RTM reading and writing
+- Added support for binarized RTM reading and conversion
+
+## v0.0.1 (2025-12-30)
+
+### Added
+
+- Added core binary IO functions
