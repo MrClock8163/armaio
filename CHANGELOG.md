@@ -5,7 +5,7 @@ file.
 
 The project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.1.0 (unreleased)
+## v0.1.0 (2026-02-02)
 
 ### Added
 
