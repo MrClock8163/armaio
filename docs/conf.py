@@ -27,6 +27,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'furo'
 html_static_path = ['_static']
 html_copy_source = False
+html_favicon = "_static/favicon.svg"
+html_logo = "_static/favicon.svg"
 
 nitpicky = True
 nitpick_ignore = {
