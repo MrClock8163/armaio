@@ -30,6 +30,14 @@ html_static_path = ['_static']
 html_copy_source = False
 html_favicon = "_static/favicon.svg"
 html_logo = "_static/favicon.svg"
+html_theme_options = {
+    "light_css_variables": {
+        "color-api-name": "#F4691F"
+    },
+    "dark_css_variables": {
+        "color-api-name": "#F4691F"
+    }
+}
 
 nitpicky = True
 nitpick_ignore = {
