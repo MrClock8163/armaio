@@ -18,7 +18,7 @@ The conversion methods accept the skeleton data in 2 representations.
     case as well.
 
 Structure format
-^^^^^^^^^^^^^^^^
+----------------
 
 This format specifies the skeleton structure as nested dictionaries
 mapping child bones to the parents.
@@ -47,7 +47,7 @@ This representation clearly shows the hierarchy of the bones.
 .. autodata:: BoneStructure
 
 Sequence format
-^^^^^^^^^^^^^^^
+---------------
 
 The sequence format is closer to the representation used in
 ``model.cfg`` files. The skeleton is defined as a list of name-parent
@@ -85,3 +85,8 @@ referenced before it is defined in the list.
 
 .. autoclass:: Bone
 .. autodata:: BoneSequence
+
+.. autodata:: OFP2_MANSKELETON
+    :no-value:
+.. autodata:: OFP2_MANSKELETON_LOWERCASE
+    :no-value:
