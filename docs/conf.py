@@ -2,7 +2,7 @@ from armaio import __version__
 
 
 project = 'ArmaIO'
-copyright = '2025, MrClock'
+copyright = '2025-%Y, ArmaIO contributors'
 author = 'MrClock'
 version = ".".join(__version__.split(".")[0:2])
 release = __version__
@@ -32,14 +32,10 @@ nitpicky = True
 nitpick_ignore = {
     ("py:class", "_T"),
     ("py:class", "optional"),
-    ("py:class", "StrOrBytesPath"),
-    ("py:class", "Image.Image")
+    ("py:class", "numpy.uint8")
 }
 nitpick_ignore_regex = {
-    ("py:class", r".*numpy.*"),
-    ("py:class", r".*np.*"),
-    ("py:class", r".*npt.*"),
-    ("py:class", r".*_T"),
+    ("py:class", r".*_T")
 }
 
 autodoc_default_options = {
