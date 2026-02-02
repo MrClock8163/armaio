@@ -62,6 +62,8 @@ Exceptions
 Functions
 ---------
 
+.. autofunction:: read_rtm
+.. autofunction:: read_rtm_file
 .. autofunction:: rot_loc_to_matrix
 
 Classes
