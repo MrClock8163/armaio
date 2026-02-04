@@ -17,7 +17,7 @@ Examples
 
     data = TexHeadersFile.read_file("texHeaders.bin")
     for tex in data.textures:
-        print(f"tex.path ({tex.mipmaps[0].width} x {tex.mipmaps[0].height})")
+        print(f"{tex.path} ({tex.mipmaps[0].width} x {tex.mipmaps[0].height})")
 
 Exceptions
 ----------
