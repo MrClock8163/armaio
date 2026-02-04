@@ -16,45 +16,97 @@ class TexHeadersError(Exception):
 
 
 class TexHeadersTextureFormat(IntEnum):
+    """Pixel color encoding."""
     INDEXED = 0
+    """Palette indexed."""
     GRAY = 1
+    """8-bit gray with 8-bit alpha."""
     RGB565 = 2
+    """5-bit red and green channels with 6-bit green channel."""
     ARGB1555 = 3
+    """5-bit RGB channels with 1-bit alpha."""
     ARGB4444 = 4
+    """4-bit RGBA channels."""
     ARGB8888 = 5
+    """8-bit RGBA channels."""
     DXT1 = 6
+    """S3TC BC1/DXT1 compressed."""
     DXT2 = 7
+    """S3TC BC2/DXT2 compressed with premultiplied alpha."""
     DXT3 = 8
+    """S3TC BC2/DXT3 compressed."""
     DXT4 = 9
+    """S3TC BC3/DXT4 compressed with premultiplied alpha."""
     DXT5 = 10
+    """S3TC BC3/DXT5 compressed."""
 
 
 class TexHeadersTextureSuffix(IntEnum):
+    """Texture suffix type."""
     DIFFUSE = 0
+    """Diffuse color in sRGB space."""
     DIFFUSE_LINEAR = 1
+    """Diffuse color in linear space (``_sky``, ``_lco``, etc.)."""
     DETAIL = 2
+    """Detail texture in linear space (``_dt``, ``_cdt``, etc.)."""
     NORMAL = 3
+    """Normal map."""
     IRRADIANCE = 4
+    """Irradiance map."""
     RANDOM = 5
+    """Random or procedural values."""
     TREECROWN = 6
+    """Treecrown texture."""
     MACRO = 7
+    """Macro overlay texture in sRGB space (``_mc``, etc.)."""
     SHADOW = 8
+    """Ambient shadow map (``_as``, etc.)."""
     SPECULAR = 9
+    """Specular map (``_sm``, ``_smdi``, etc.)."""
     DITHERING = 10
+    """Dithering map."""
     DETAIL_SPECULAR = 11
+    """Detail specular map (``_dtsmdi``)."""
     MASK = 12
+    """Multi material mask (``_mask``)."""
     THERMAL = 13
+    """Thermal imaging texture (``_ti``)."""
+
+
+class TexHeadersColor(NamedTuple, Generic[_T]):
+    """RGBA color value."""
+    red: _T
+    """Red value."""
+    green: _T
+    """Green value."""
+    blue: _T
+    """Blue value."""
+    alpha: _T
+    """Alpha value."""
 
 
 @dataclass(frozen=True)
 class TexHeadersMipmap:
+    """Texture mipmap record."""
     width: int
+    """Texture width."""
     height: int
+    """Texture height."""
     format: TexHeadersTextureFormat
+    """Pixel color encoding."""
     offset: int
+    """Byte offset to mipmap in texture file."""
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
+        """
+        Reads a mipmap record from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :return: Mipmap data
+        :rtype: Self
+        """
         width, height = binary.read_ushorts(stream, 2)
         assert stream.read(2) == b"\x00\x00"  # always 0
         texformat = TexHeadersTextureFormat(binary.read_byte(stream))
@@ -64,19 +116,26 @@ class TexHeadersMipmap:
         return cls(width, height, texformat, offset)
 
     def write(self, stream: IO[bytes]) -> None:
+        """
+        Writes a mipmap record to a binary stream.
+
+        :param stream: Target binary stream
+        :type stream: IO[bytes]
+        """
         binary.write_ushort(stream, self.width, self.height, 0)
         binary.write_byte(stream, self.format, 3)
         binary.write_ulong(stream, self.offset)
 
 
-class TexHeadersColor(NamedTuple, Generic[_T]):
-    red: _T
-    green: _T
-    blue: _T
-    alpha: _T
-
-
 def _read_rgba_float(stream: IO[bytes]) -> TexHeadersColor[float]:
+    """
+    Reads an RGBA color encoded as floats from a binary stream.
+
+    :param stream: Source binary stream
+    :type stream: IO[bytes]
+    :return: Color value
+    :rtype: TexHeadersColor[float]
+    """
     r, g, b, a = binary.read_floats(stream, 4)
     return TexHeadersColor(r, g, b, a)
 
@@ -85,6 +144,14 @@ def _write_rgba_float(
     stream: IO[bytes],
     color: TexHeadersColor[float]
 ) -> None:
+    """
+    Writes an RGBA color encoded as floats to a binary stream.
+
+    :param stream: Target binary stream
+    :type stream: IO[bytes]
+    :param color: RGBA color in [0.0; 1.0] range
+    :type color: TexHeadersColor[float]
+    """
     binary.write_float(
         stream,
         color.red,
@@ -95,11 +162,27 @@ def _write_rgba_float(
 
 
 def _read_bgra(stream: IO[bytes]) -> TexHeadersColor[int]:
+    """
+    Reads an RGBA color encoded as integers from a binary stream.
+
+    :param stream: Source binary stream
+    :type stream: IO[bytes]
+    :return: Color value
+    :rtype: TexHeadersColor[float]
+    """
     b, g, r, a = binary.read_bytes(stream, 4)
     return TexHeadersColor(r, g, b, a)
 
 
 def _write_bgra(stream: IO[bytes], color: TexHeadersColor[int]) -> None:
+    """
+    Writes an RGBA color encoded as integers to a binary stream.
+
+    :param stream: Target binary stream
+    :type stream: IO[bytes]
+    :param color: RGBA color in [0; 255] range
+    :type color: TexHeadersColor[float]
+    """
     binary.write_byte(
         stream,
         color.blue,
@@ -111,26 +194,49 @@ def _write_bgra(stream: IO[bytes], color: TexHeadersColor[int]) -> None:
 
 @dataclass(frozen=True)
 class TexHeadersRecord:
+    """Texture data record."""
     color_average_float: TexHeadersColor[float]
+    """Float encoded average texture color."""
     color_average: TexHeadersColor[int]
+    """8-bit average texture color."""
     color_max: TexHeadersColor[int]
+    """8-bit maximum texture color."""
     maxcolor_defined: bool
+    """Texture has maximum color TAGG."""
     alpha_interpolated: bool
+    """Alpha channel is interpolated for smooth transparency."""
     alpha_binary: bool
+    """Alpha channel is not interpolated, simple transparency."""
     non_opaque: bool
+    """Interpolated alpha and average alpha is below 127."""
     format: TexHeadersTextureFormat
+    """Pixel color encoding."""
     is_paa: bool
+    """File is a PAA (not PAC)."""
     path: str
+    """Path to texture file relative to ``texHeaders.bin`` file."""
     suffix: TexHeadersTextureSuffix
+    """Texture type."""
     mipmaps: tuple[TexHeadersMipmap, ...]
+    """Mipmap records."""
     filesize: int
+    """File size in bytes."""
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
-        count_pallets, pallet_ptr = binary.read_ulongs(stream, 2)
-        if count_pallets != 1 or pallet_ptr != 0:
+        """
+        Reads a texture record from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :raises TexHeadersError: Color palette indexed file data was found
+        :return: Texture data
+        :rtype: Self
+        """
+        count_palettes, palette_ptr = binary.read_ulongs(stream, 2)
+        if count_palettes != 1 or palette_ptr != 0:
             raise TexHeadersError(
-                "Color pallets are not supported"
+                "Color palettes are not supported"
             )
 
         average_color_float = _read_rgba_float(stream)
@@ -181,6 +287,12 @@ class TexHeadersRecord:
         )
 
     def write(self, stream: IO[bytes]) -> None:
+        """
+        Writes a texture record to a binary stream.
+
+        :param stream: Target binary stream
+        :type stream: IO[bytes]
+        """
         binary.write_ulong(stream, 1, 0)
         _write_rgba_float(stream, self.color_average_float)
         _write_bgra(stream, self.color_average)
@@ -202,15 +314,30 @@ class TexHeadersRecord:
 
 
 class TexHeadersFile:
+    """Texture index file."""
+
     def __init__(self) -> None:
         self._textures: tuple[TexHeadersRecord, ...] = ()
 
     @property
     def textures(self) -> tuple[TexHeadersRecord, ...]:
+        """
+        :return: Texture records
+        :rtype: tuple[TexHeadersRecord, ...]
+        """
         return self._textures
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
+        """
+        Reads texture index data from a binary stream.
+
+        :param stream: Source binary stream
+        :type stream: IO[bytes]
+        :raises TexHeadersError: Invalid or unsupported file
+        :return: Texture index data
+        :rtype: Self
+        """
         signature = stream.read(4)
         if signature != b"0DHT":
             raise TexHeadersError(
@@ -238,15 +365,35 @@ class TexHeadersFile:
 
     @classmethod
     def read_file(cls, filepath: str) -> Self:
+        """
+        Reads texture index data from a ``texHeaders.bin`` file.
+
+        :param filepath: Path to ``texHeaders.bin`` file
+        :type filepath: str
+        :return: Texture index data
+        :rtype: Self
+        """
         with open(filepath, "rb") as file:
             return cls.read(file)
 
     def write(self, stream: IO[bytes]) -> None:
+        """
+        Writes texture index data to a binary stream.
+
+        :param stream: Target binary stream
+        :type stream: IO[bytes]
+        """
         binary.write_chars(stream, "0DHT")
         binary.write_ulong(stream, 1, len(self._textures))
         for tex in self._textures:
             tex.write(stream)
 
     def write_file(self, filepath: str) -> None:
+        """
+        Writes texture index data to a file.
+
+        :param filepath: Path to target file
+        :type filepath: str
+        """
         with open(filepath, "wb") as file:
             self.write(file)
