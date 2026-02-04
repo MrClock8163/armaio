@@ -363,7 +363,7 @@ class PaaFlagTagg(PaaTagg):
     Container to store the alpha mode flag.
 
     This flag must be present in textures that are supposed to have
-    any transparencey. If this flag is not present, the assigned model
+    any transparency. If this flag is not present, the assigned model
     faces are not marked for alpha handling during the binarization of
     P3Ds.
     """

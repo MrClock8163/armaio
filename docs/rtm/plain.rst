@@ -64,6 +64,14 @@ Functions
 
 .. autofunction:: read_rtm
 .. autofunction:: read_rtm_file
+
+.. note::
+
+    The quaternion-vector pair to matrix conversion is implemented based on
+    the formulas presented on
+    `euclideanspace.com <https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm>`_.
+    Sign changes were made to account for the axis order differences.
+
 .. autofunction:: rot_loc_to_matrix
 
 Classes
