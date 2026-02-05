@@ -317,7 +317,8 @@ class TexHeadersFile:
     """Texture index file."""
 
     def __init__(self) -> None:
-        self._textures: tuple[TexHeadersRecord, ...] = ()
+        self._textures: list[TexHeadersRecord] = []
+        self._paths: set[str] = set()
 
     @property
     def textures(self) -> tuple[TexHeadersRecord, ...]:
@@ -325,7 +326,37 @@ class TexHeadersFile:
         :return: Texture records
         :rtype: tuple[TexHeadersRecord, ...]
         """
-        return self._textures
+        return tuple(self._textures)
+
+    def add_texture(self, tex: TexHeadersRecord) -> None:
+        """
+        Adds texture record to texture index.
+
+        :param tex: Record to add
+        :type tex: TexHeadersRecord
+        :raises ValueError: Path already recorded
+        """
+        if tex.path in self._paths:
+            raise ValueError(
+                f"Texture with path already exists: {tex.path}"
+            )
+
+        self._paths.add(tex.path)
+        self._textures.append(tex)
+
+    def pop_texture(self, idx: int) -> TexHeadersRecord:
+        """
+        Remove and return the record at the given index.
+
+        :param idx: Index to remove
+        :type idx: int
+        :return: Removed record
+        :rtype: TexHeadersRecord
+        """
+        tex = self._textures.pop(idx)
+        self._paths.remove(tex.path)
+
+        return tex
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
@@ -354,12 +385,13 @@ class TexHeadersFile:
         count_textures = binary.read_ulong(stream)
         output = cls()
 
-        output._textures = tuple(
-            [
-                TexHeadersRecord.read(stream)
-                for _ in range(count_textures)
-            ]
-        )
+        output._textures = [
+            TexHeadersRecord.read(stream)
+            for _ in range(count_textures)
+        ]
+
+        for tex in output._textures:
+            output._paths.add(tex.path)
 
         return output
 
