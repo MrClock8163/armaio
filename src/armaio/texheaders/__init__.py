@@ -319,6 +319,15 @@ class TexHeadersFile:
     def __init__(self) -> None:
         self._textures: list[TexHeadersRecord] = []
         self._paths: set[str] = set()
+        self._source: str | None = None
+
+    @property
+    def source(self) -> str | None:
+        """
+        :return: Path to source file (None if not read from file)
+        :rtype: str | None
+        """
+        return self._source
 
     @property
     def textures(self) -> tuple[TexHeadersRecord, ...]:
@@ -406,7 +415,10 @@ class TexHeadersFile:
         :rtype: Self
         """
         with open(filepath, "rb") as file:
-            return cls.read(file)
+            texh = cls.read(file)
+
+        texh._source = filepath
+        return texh
 
     def write(self, stream: IO[bytes]) -> None:
         """
