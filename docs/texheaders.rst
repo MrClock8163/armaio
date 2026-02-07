@@ -11,6 +11,9 @@ The implementations are based on the information on the
 Examples
 --------
 
+Reading
+^^^^^^^
+
 .. code-block:: python
 
     from armaio.texheaders import TexHeadersFile
@@ -18,6 +21,19 @@ Examples
     data = TexHeadersFile.read_file("texHeaders.bin")
     for tex in data.textures:
         print(f"{tex.path} ({tex.mipmaps[0].width} x {tex.mipmaps[0].height})")
+
+Creating
+^^^^^^^^
+
+.. code-block:: python
+
+    from armaio.texheaders import TexHeadersFile
+
+    data = TexHeadersFile.from_directory(
+        "pbo/directory",
+        strict=True
+    )
+    data.write_file("texHeaders.bin")
 
 Exceptions
 ----------

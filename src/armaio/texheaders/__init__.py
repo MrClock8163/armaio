@@ -649,7 +649,7 @@ class TexHeadersFile:
     ) -> Self:
         """
         Iterates the contents of a directory recursively, and creates a
-        a texture index from the PAA files found within.
+        texture index from the PAA files found within.
 
         :param dirpath: Path to directory
         :type dirpath: str | os.PathLike[str]
