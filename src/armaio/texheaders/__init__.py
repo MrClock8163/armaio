@@ -1,8 +1,20 @@
 from enum import IntEnum
 from typing import NamedTuple, IO, Self, TypeVar, Generic
 from dataclasses import dataclass
+from pathlib import Path
+import os
+from re import compile
 
 from .. import binary
+from ..paa import (
+    PaaFile,
+    PaaFormat,
+    PaaAverageColorTagg,
+    PaaMaxColorTagg,
+    PaaFlagTagg,
+    PaaOffsetTagg,
+    PaaAlphaFlag
+)
 
 
 _T = TypeVar("_T")
@@ -41,6 +53,19 @@ class TexHeadersTextureFormat(IntEnum):
     """S3TC BC3/DXT5 compressed."""
 
 
+_FORMAT_MAP: dict[PaaFormat, TexHeadersTextureFormat] = {
+    PaaFormat.ARGB1555: TexHeadersTextureFormat.ARGB1555,
+    PaaFormat.ARGB4444: TexHeadersTextureFormat.ARGB4444,
+    PaaFormat.ARGB8888: TexHeadersTextureFormat.ARGB8888,
+    PaaFormat.GRAY: TexHeadersTextureFormat.GRAY,
+    PaaFormat.DXT1: TexHeadersTextureFormat.DXT1,
+    PaaFormat.DXT2: TexHeadersTextureFormat.DXT2,
+    PaaFormat.DXT3: TexHeadersTextureFormat.DXT3,
+    PaaFormat.DXT4: TexHeadersTextureFormat.DXT4,
+    PaaFormat.DXT5: TexHeadersTextureFormat.DXT5
+}
+
+
 class TexHeadersTextureSuffix(IntEnum):
     """Texture suffix type."""
     DIFFUSE = 0
@@ -71,6 +96,84 @@ class TexHeadersTextureSuffix(IntEnum):
     """Multi material mask (``_mask``)."""
     THERMAL = 13
     """Thermal imaging texture (``_ti``)."""
+
+
+_SUFFIX_MAP: dict[str, TexHeadersTextureSuffix] = {
+    **dict.fromkeys(
+        [
+            "co",
+            "ca",
+            "cat",
+            "can",
+        ],
+        TexHeadersTextureSuffix.DIFFUSE
+    ),
+    **dict.fromkeys(
+        [
+            "sky",
+            "lco",
+            "lca"
+        ],
+        TexHeadersTextureSuffix.DIFFUSE_LINEAR
+    ),
+    **dict.fromkeys(
+        [
+            "dt",
+            "detail",
+            "cdt",
+            "mco"
+        ],
+        TexHeadersTextureSuffix.DETAIL
+    ),
+    **dict.fromkeys(
+        [
+            "no",
+            "nopx",
+            "noex",
+            "normalmap",
+            "ns",
+            "nsex",
+            "nshq",
+            "nof",
+            "nofex",
+            "nofhq",
+            "non",
+            "nohq",
+            "novhq"
+        ],
+        TexHeadersTextureSuffix.NORMAL
+    ),
+    "mc": TexHeadersTextureSuffix.MACRO,
+    **dict.fromkeys(
+        [
+            "as",
+            "ads",
+            "adshq"
+        ],
+        TexHeadersTextureSuffix.SHADOW
+    ),
+    **dict.fromkeys(
+        [
+            "sm",
+            "smdi"
+        ],
+        TexHeadersTextureSuffix.SPECULAR
+    ),
+    "dtsmdi": TexHeadersTextureSuffix.DETAIL_SPECULAR,
+    "mask": TexHeadersTextureSuffix.MASK,
+    "ti": TexHeadersTextureSuffix.THERMAL
+}
+
+
+def _get_suffix(filepath: Path) -> TexHeadersTextureSuffix:
+    name = filepath.stem.lower()
+    if name.endswith("_ti_ca"):
+        return TexHeadersTextureSuffix.THERMAL
+
+    return _SUFFIX_MAP.get(
+        name.split("_")[-1].lower(),
+        TexHeadersTextureSuffix.DIFFUSE
+    )
 
 
 class TexHeadersColor(NamedTuple, Generic[_T]):
@@ -312,6 +415,100 @@ class TexHeadersRecord:
 
         binary.write_ulong(stream, self.filesize)
 
+    @classmethod
+    def from_paa(
+        cls,
+        filepath: str | os.PathLike[str],
+        root: str | os.PathLike[str],
+        paa: PaaFile
+    ) -> Self:
+        """
+        Creates a texture record from PAA data.
+
+        :param filepath: Path to the PAA file
+        :type filepath: str | os.PathLike[str]
+        :param root: Path to root texture index file
+        :type root: str | os.PathLike[str]
+        :param paa: Texture data
+        :type paa: PaaFile
+        :raises TexHeadersError: PAA data did not contain the necessary data
+        :return: Texture record
+        :rtype: Self
+        """
+        avg_color = paa.get_tagg(PaaAverageColorTagg)
+        if avg_color is None:
+            raise TexHeadersError(
+                "Average color TAGG not found in PAA"
+            )
+
+        color_avg = TexHeadersColor(
+            avg_color.red,
+            avg_color.green,
+            avg_color.blue,
+            avg_color.alpha
+        )
+        color_avg_float = TexHeadersColor(
+            color_avg.red / 255,
+            color_avg.green / 255,
+            color_avg.blue / 255,
+            color_avg.alpha / 255
+        )
+
+        max_color = paa.get_tagg(PaaMaxColorTagg)
+        if max_color is None:
+            color_max = TexHeadersColor(255, 255, 255, 255)
+            max_defined = False
+        else:
+            color_max = TexHeadersColor(
+                max_color.red,
+                max_color.green,
+                max_color.blue,
+                max_color.alpha
+            )
+            max_defined = True
+
+        offsets = paa.get_tagg(PaaOffsetTagg)
+        if offsets is None:
+            raise TexHeadersError(
+                "Mipmap offsets TAGG not found in PAA"
+            )
+
+        mipmaps = [
+            TexHeadersMipmap(
+                mip.width,
+                mip.height,
+                _FORMAT_MAP[paa.format],
+                offset
+            )
+            for mip, offset in zip(paa.mipmaps, offsets.offsets)
+        ]
+
+        filepath = Path(filepath)
+        root = Path(root)
+
+        flag = paa.get_tagg(PaaFlagTagg)
+        size = filepath.stat().st_size
+
+        return cls(
+            color_avg_float,
+            color_avg,
+            color_max,
+            max_defined,
+            bool(flag is not None and flag.value == PaaAlphaFlag.INTERPOLATED),
+            bool(flag is not None and flag.value == PaaAlphaFlag.BINARY),
+            bool(
+                flag is not None
+                and flag.value == PaaAlphaFlag.INTERPOLATED
+                and color_avg.alpha < 128
+            ),
+            _FORMAT_MAP[paa.format],
+            True,
+            str(filepath.relative_to(root)).lower().replace("/", "\\"),
+            _get_suffix(filepath),
+            tuple(mipmaps),
+            size
+        )
+
 
 class TexHeadersFile:
     """Texture index file."""
@@ -441,3 +638,58 @@ class TexHeadersFile:
         """
         with open(filepath, "wb") as file:
             self.write(file)
+
+    @classmethod
+    def from_directory(
+        cls,
+        dirpath: str | os.PathLike[str],
+        *,
+        strict: bool = False,
+        ignore_dirs: str | None = r"^[\._].*$"
+    ) -> Self:
+        """
+        Iterates the contents of a directory recursively, and creates a
+        a texture index from the PAA files found within.
+
+        :param dirpath: Path to directory
+        :type dirpath: str | os.PathLike[str]
+        :param strict: Stop on internal errors, defaults to False
+        :type strict: bool, optional
+        :param ignore_dirs: Regex pattern to ignore unwanted (eg. hidden)
+            directories, defaults to ``r"^[\\._].*$"``
+        :type ignore_dirs: str | None, optional
+        :raises Exception: An error occured while processing a file
+        :return: New texture index
+        :rtype: Self
+        """
+        output = cls()
+        ignore = (
+            compile(ignore_dirs)
+            if ignore_dirs is not None
+            else None
+        )
+        for directory, subdirs, files in os.walk(dirpath):
+            if ignore is not None:
+                hidden = list(filter(lambda x: ignore.match(x), subdirs))
+                for name in hidden:
+                    subdirs.remove(name)
+
+            for file in files:
+                filepath = Path(directory, file)
+                if filepath.suffix.lower() != ".paa":
+                    continue
+
+                paa = PaaFile.read_file(str(filepath))
+                try:
+                    output._textures.append(
+                        TexHeadersRecord.from_paa(
+                            filepath,
+                            Path(dirpath),
+                            paa
+                        )
+                    )
+                except Exception as e:
+                    if strict:
+                        raise e
+
+        return output
