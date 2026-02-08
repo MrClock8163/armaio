@@ -72,6 +72,7 @@ more complex authoring application built on top of it.
 
     paa/format
     paa/codec
+    texheaders
 
 .. toctree::
     :maxdepth: 1

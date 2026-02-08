@@ -10,6 +10,7 @@ The project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Addded
 
 - Added `ṫyping` module with file path type aliases
+- Added support for `texHeaders.bin` reading and writing
 
 ### Changed
 

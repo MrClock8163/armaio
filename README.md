@@ -39,6 +39,9 @@ more complex authoring application built on top of it.
   - ARGB4444
   - ARGB1555
   - AI88
+- Texture index (`texHeaders.bin`)
+  - reading
+  - writing
 - RTM (plain)
   - reading
   - writing
