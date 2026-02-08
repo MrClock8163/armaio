@@ -1,7 +1,9 @@
 from typing import Self, IO
 from types import MappingProxyType
 from io import BytesIO
+from os import fspath
 
+from ..typing import StrOrBytesPath
 from .. import binary
 from ..compression import lzo1x_decompress
 from ._common import RtmQuaternion, RtmVector, RtmProperty
@@ -123,7 +125,7 @@ class BmtrFile:
     """
 
     def __init__(self) -> None:
-        self._source: str | None = None
+        self._source: str | bytes | None = None
         self._version: int = 5
         self._motion: RtmVector = RtmVector(0.0, 0.0, 0.0)
         self._bones: tuple[str, ...] = ()
@@ -131,10 +133,10 @@ class BmtrFile:
         self._props: tuple[RtmProperty, ...] = ()
 
     @property
-    def source(self) -> str | None:
+    def source(self) -> str | bytes | None:
         """
         :return: Path to source file (None if not read from file)
-        :rtype: str | None
+        :rtype: str | bytes | None
         """
         return self._source
 
@@ -323,18 +325,18 @@ class BmtrFile:
         return output
 
     @classmethod
-    def read_file(cls, filepath: str) -> Self:
+    def read_file(cls, filepath: StrOrBytesPath) -> Self:
         """
         Reads animation data from a binarized RTM file at a given path.
 
         :param filepath: Path to RTM file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         :return: Animation data
         :rtype: Self
         """
         with open(filepath, "rb") as file:
             output = cls.read(file)
 
-        output._source = filepath
+        output._source = fspath(filepath)
 
         return output

@@ -1,8 +1,8 @@
 .. py:module:: armaio.binary
 .. py:currentmodule:: armaio.binary
 
-Data types
-==========
+Serialization
+=============
 
 The :py:mod:`armaio.binary` module provides utility functions for reading and
 writing the basic data types used in Arma 3 file formats as outlined on the

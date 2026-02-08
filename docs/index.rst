@@ -62,6 +62,7 @@ more complex authoring application built on top of it.
     :maxdepth: 1
     :caption: Core
 
+    typing
     binary
     compression
 

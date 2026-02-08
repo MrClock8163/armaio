@@ -8,10 +8,12 @@ import struct
 from enum import IntEnum
 from typing import Self, TypeVar, IO
 from abc import ABC, abstractmethod
+from os import fspath
 
 import numpy as np
 from numpy import typing as npt
 
+from ..typing import StrOrBytesPath
 from .. import binary
 from ..compression import (
     lzo1x_decompress,
@@ -727,17 +729,17 @@ class PaaFile():
     """
 
     def __init__(self) -> None:
-        self._source: str | None = None
+        self._source: str | bytes | None = None
         self._format: PaaFormat = PaaFormat.DXT1
         self._taggs: tuple[PaaTagg, ...] = ()
         self._mips: tuple[PaaMipmap, ...] = ()
         self._alpha: bool = False
 
     @property
-    def source(self) -> str | None:
+    def source(self) -> str | bytes | None:
         """
         :return: Source file path
-        :rtype: str | None
+        :rtype: str | bytes | None
         """
         return self._source
 
@@ -832,13 +834,13 @@ class PaaFile():
     @classmethod
     def read_file(
         cls,
-        filepath: str
+        filepath: StrOrBytesPath
     ) -> Self:
         """
         Reads a PAA file at the specified path.
 
         :param filepath: Path to PAA file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         :return: Texture data
         :rtype: Self
         """
@@ -846,7 +848,7 @@ class PaaFile():
         with open(filepath, "rb") as file:
             output = cls.read(file)
 
-        output._source = filepath
+        output._source = fspath(filepath)
 
         return output
 

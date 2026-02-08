@@ -5,6 +5,18 @@ file.
 
 The project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.0 (unreleased)
+
+### Addded
+
+- Added `ṫyping` module with file path type aliases
+
+### Changed
+
+- Updated `PaaFile.read_file` to accept broader types for filepaths
+- Updated `RtmFile.read_file` to accept broader types for filepaths
+- Updated `BmtrFile.read_file` to accept broader types for filepaths
+
 ## v0.1.0 (2026-02-02)
 
 ### Added

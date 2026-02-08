@@ -4,18 +4,19 @@ Utilities for dealing with PAA images with the Pillow library.
 
 from PIL import Image
 
+from ..typing import StrOrBytesPath
 from ._format import PaaFile
 
 
 def open_paa_image(
-    path: str,
+    path: StrOrBytesPath,
     mipmap: int = 0
 ) -> Image.Image:
     """
     Convenience function that opens a PAA as a Pillow Image object.
 
     :param path: Path to PAA file
-    :type path: str
+    :type path: StrOrBytesPath
     :param mipmap: Index of mipmap to open, defaults to 0
     :type mipmap: int, optional
     :return: Decoded image

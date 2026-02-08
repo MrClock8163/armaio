@@ -2,8 +2,9 @@ from typing import Self, IO
 from types import MappingProxyType
 from bisect import insort
 from struct import pack
+from os import fspath
 
-
+from ..typing import StrOrBytesPath
 from .. import binary
 from ._bmtr import BmtrFile, BmtrFrame
 from ._common import (
@@ -330,16 +331,16 @@ class RtmFile:
 
     def __init__(self) -> None:
         self._props: list[RtmProperty] = []
-        self._source: str | None = None
+        self._source: str | bytes | None = None
         self._frames: list[RtmFrame] = []
         self._motion: RtmVector = RtmVector(0.0, 0.0, 0.0)
         self._bones: tuple[str, ...] | None = None
 
     @property
-    def source(self) -> str | None:
+    def source(self) -> str | bytes | None:
         """
         :return: Path to source file (None if not read from file)
-        :rtype: str | None
+        :rtype: str | bytes | None
         """
         return self._source
 
@@ -501,19 +502,19 @@ class RtmFile:
         return output
 
     @classmethod
-    def read_file(cls, filepath: str) -> Self:
+    def read_file(cls, filepath: StrOrBytesPath) -> Self:
         """
         Reads an RTM file at a given path.
 
         :param filepath: Path to RTM file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         :return: Animation data
         :rtype: Self
         """
         with open(filepath, "rb") as file:
             output = cls.read(file)
 
-        output._source = filepath
+        output._source = fspath(filepath)
 
         return output
 
@@ -600,12 +601,12 @@ class RtmFile:
         for frame in self._frames:
             frame.write(stream)
 
-    def write_file(self, filepath: str) -> None:
+    def write_file(self, filepath: StrOrBytesPath) -> None:
         """
         Writes animation data to a specific file path.
 
         :param filepath: Path to RTM file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         """
         with open(filepath, "wb") as file:
             self.write(file)
