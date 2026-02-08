@@ -2,9 +2,10 @@ from enum import IntEnum
 from typing import NamedTuple, IO, Self, TypeVar, Generic
 from dataclasses import dataclass
 from pathlib import Path
-import os
+from os import walk, fspath
 from re import compile
 
+from ..typing import StrPath, StrOrBytesPath
 from .. import binary
 from ..paa import (
     PaaFile,
@@ -418,17 +419,17 @@ class TexHeadersRecord:
     @classmethod
     def from_paa(
         cls,
-        filepath: str | os.PathLike[str],
-        root: str | os.PathLike[str],
+        filepath: StrPath,
+        root: StrPath,
         paa: PaaFile
     ) -> Self:
         """
         Creates a texture record from PAA data.
 
         :param filepath: Path to the PAA file
-        :type filepath: str | os.PathLike[str]
+        :type filepath: StrPath
         :param root: Path to root texture index file
-        :type root: str | os.PathLike[str]
+        :type root: StrPath
         :param paa: Texture data
         :type paa: PaaFile
         :raises TexHeadersError: PAA data did not contain the necessary data
@@ -516,13 +517,13 @@ class TexHeadersFile:
     def __init__(self) -> None:
         self._textures: list[TexHeadersRecord] = []
         self._paths: set[str] = set()
-        self._source: str | None = None
+        self._source: str | bytes | None = None
 
     @property
-    def source(self) -> str | None:
+    def source(self) -> str | bytes | None:
         """
         :return: Path to source file (None if not read from file)
-        :rtype: str | None
+        :rtype: str | bytes | None
         """
         return self._source
 
@@ -602,19 +603,19 @@ class TexHeadersFile:
         return output
 
     @classmethod
-    def read_file(cls, filepath: str) -> Self:
+    def read_file(cls, filepath: StrOrBytesPath) -> Self:
         """
         Reads texture index data from a ``texHeaders.bin`` file.
 
         :param filepath: Path to ``texHeaders.bin`` file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         :return: Texture index data
         :rtype: Self
         """
         with open(filepath, "rb") as file:
             texh = cls.read(file)
 
-        texh._source = filepath
+        texh._source = fspath(filepath)
         return texh
 
     def write(self, stream: IO[bytes]) -> None:
@@ -629,12 +630,12 @@ class TexHeadersFile:
         for tex in self._textures:
             tex.write(stream)
 
-    def write_file(self, filepath: str) -> None:
+    def write_file(self, filepath: StrOrBytesPath) -> None:
         """
         Writes texture index data to a file.
 
         :param filepath: Path to target file
-        :type filepath: str
+        :type filepath: StrOrBytesPath
         """
         with open(filepath, "wb") as file:
             self.write(file)
@@ -642,7 +643,7 @@ class TexHeadersFile:
     @classmethod
     def from_directory(
         cls,
-        dirpath: str | os.PathLike[str],
+        dirpath: StrPath,
         *,
         strict: bool = False,
         ignore_dirs: str | None = r"^[\._].*$"
@@ -652,7 +653,7 @@ class TexHeadersFile:
         texture index from the PAA files found within.
 
         :param dirpath: Path to directory
-        :type dirpath: str | os.PathLike[str]
+        :type dirpath: StrPath
         :param strict: Stop on internal errors, defaults to False
         :type strict: bool, optional
         :param ignore_dirs: Regex pattern to ignore unwanted (eg. hidden)
@@ -668,7 +669,7 @@ class TexHeadersFile:
             if ignore_dirs is not None
             else None
         )
-        for directory, subdirs, files in os.walk(dirpath):
+        for directory, subdirs, files in walk(dirpath):
             if ignore is not None:
                 hidden = list(filter(lambda x: ignore.match(x), subdirs))
                 for name in hidden:
@@ -684,7 +685,7 @@ class TexHeadersFile:
                     output._textures.append(
                         TexHeadersRecord.from_paa(
                             filepath,
-                            Path(dirpath),
+                            dirpath,
                             paa
                         )
                     )
