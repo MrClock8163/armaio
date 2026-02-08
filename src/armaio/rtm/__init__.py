@@ -1,5 +1,7 @@
 from typing import IO
+from os import fspath
 
+from ..typing import StrOrBytesPath
 from ._rtm import (  # noqa: F401
     RtmError as RtmError,
     RtmFrame as RtmFrame,
@@ -52,7 +54,7 @@ def read_rtm(
 
 
 def read_rtm_file(
-    filepath: str,
+    filepath: StrOrBytesPath,
     skeleton: BoneStructure | BoneSequence
 ) -> RtmFile:
     """
@@ -61,7 +63,7 @@ def read_rtm_file(
     If the data is in binarized format, the conversion is done automatically.
 
     :param filepath: Path to RTM file
-    :type filepath: str
+    :type filepath: StrOrBytesPath
     :param skeleton: Skeleton structure data
     :type skeleton: BoneStructure | BoneSequence
     :return: Animation data
@@ -69,7 +71,7 @@ def read_rtm_file(
     """
     with open(filepath, "rb") as file:
         rtm = read_rtm(file, skeleton)
-        rtm._source = filepath
+        rtm._source = fspath(filepath)
         return rtm
 
 
