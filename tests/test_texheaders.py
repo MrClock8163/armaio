@@ -81,3 +81,12 @@ def test_writing() -> None:
 
     with BytesIO() as stream:
         texh.write(stream)
+
+
+def test_from_directory() -> None:
+    texh = TexHeadersFile.from_directory(".")
+
+    assert len(texh.textures) == 7
+
+    with BytesIO() as stream:
+        texh.write(stream)
