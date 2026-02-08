@@ -49,6 +49,7 @@ more complex authoring application built on top of it.
     :maxdepth: 1
 
     changelog
+    typing
 
 .. toctree::
     :maxdepth: 1
