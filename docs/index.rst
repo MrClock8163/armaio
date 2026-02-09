@@ -57,6 +57,7 @@ more complex authoring application built on top of it.
     Source code <https://github.com/MrClock8163/armaio>
     Published package <https://pypi.org/project/armaio/>
     Arma 3 community wiki <https://community.bistudio.com/wiki/Category:Arma_3>
+    ImHex patterns <https://github.com/WerWolv/ImHex-Patterns/tree/master/patterns/a3>
 
 .. toctree::
     :maxdepth: 1
