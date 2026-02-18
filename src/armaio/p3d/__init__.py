@@ -1,8 +1,9 @@
-from typing import Self, IO, NamedTuple, Any
+from typing import Self, IO, NamedTuple, Any, TypeAlias
 from os import fspath
 from struct import Struct
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from math import sqrt
 
 from ..typing import StrOrBytesPath
 from .. import binary
@@ -13,10 +14,17 @@ class P3dError(Exception):
         return f"P3D - {super().__str__()}"
 
 
-_VECTOR2D = Struct("<ff")
-_VECTOR3D = Struct("<fff")
-_VERTEX = Struct("<fffI")
-_FACE = Struct("<IIff")
+_STRUCT_VECTOR2D = Struct("<ff")
+_STRUCT_VECTOR3D = Struct("<fff")
+_STRUCT_VERTEX = Struct("<fffI")
+_STRUCT_FACE = Struct("<IIffIIffIIffIIff")
+
+_FACEVERTS: TypeAlias = tuple[
+    int, int, float, float,
+    int, int, float, float,
+    int, int, float, float,
+    int, int, float, float
+]
 
 
 class P3dVector2d(NamedTuple):
@@ -27,11 +35,18 @@ class P3dVector2d(NamedTuple):
     def read(cls, stream: IO[bytes]) -> Self:
         u: float
         v: float
-        u, v = _VECTOR2D.unpack(stream.read(8))
+        u, v = _STRUCT_VECTOR2D.unpack(stream.read(8))
         return cls(u, v)
 
     def write(self, stream: IO[bytes]) -> None:
-        stream.write(_VECTOR2D.pack(*self))
+        stream.write(_STRUCT_VECTOR2D.pack(*self))
+
+    def normalized(self) -> Self:
+        length = sqrt(self.u**2 + self.v ** 2)
+        if length == 0.0:
+            return type(self)(self.u, self.v)
+
+        return type(self)(self.u / length, self.v / length)
 
 
 class P3dVector3d(NamedTuple):
@@ -44,11 +59,18 @@ class P3dVector3d(NamedTuple):
         x: float
         y: float
         z: float
-        x, y, z = _VECTOR3D.unpack(stream.read(12))
+        x, y, z = _STRUCT_VECTOR3D.unpack(stream.read(12))
         return cls(x, y, z)
 
     def write(self, stream: IO[bytes]) -> None:
-        stream.write(_VECTOR3D.pack(*self))
+        stream.write(_STRUCT_VECTOR3D.pack(*self))
+
+    def normalized(self) -> Self:
+        length = sqrt(self.x**2 + self.y ** 2 + self.z**2)
+        if length == 0.0:
+            return type(self)(self.x, self.y, self.z)
+
+        return type(self)(self.x / length, self.y / length, self.x / length)
 
 
 @dataclass(frozen=True)
@@ -62,11 +84,11 @@ class P3dVertex:
         y: float
         z: float
         flags: int
-        x, y, z, flags = _VERTEX.unpack(stream.read(16))
+        x, y, z, flags = _STRUCT_VERTEX.unpack(stream.read(16))
         return cls(P3dVector3d(x, y, z), flags)
 
     def write(self, stream: IO[bytes]) -> None:
-        stream.write(_VERTEX.pack(*self.point, self.flags))
+        stream.write(_STRUCT_VERTEX.pack(*self.point, self.flags))
 
 
 class P3dEdge(NamedTuple):
@@ -87,21 +109,29 @@ class P3dFace:
     def read(cls, stream: IO[bytes]) -> Self:
         count_sides = binary.read_ulong(stream)
         assert 3 <= count_sides <= 4
-        verts: list[int] = []
-        normals: list[int] = []
-        uvs: list[P3dVector2d] = []
 
-        vert: int
-        norm: int
-        u: float
-        v: float
-        for _ in range(count_sides):
-            vert, norm, u, v = _FACE.unpack(stream.read(16))
-            verts.append(vert)
-            normals.append(norm)
-            uvs.append(P3dVector2d(u, v))
-
-        stream.seek((4 - count_sides) * 16, 1)
+        verts_table: _FACEVERTS = _STRUCT_FACE.unpack(stream.read(16 * 4))
+        verts: list[int] = [
+            verts_table[0],
+            verts_table[4],
+            verts_table[8]
+        ]
+        normals: list[int] = [
+            verts_table[1],
+            verts_table[5],
+            verts_table[9]
+        ]
+        uvs: list[P3dVector2d] = [
+            P3dVector2d(verts_table[2], verts_table[3]),
+            P3dVector2d(verts_table[6], verts_table[7]),
+            P3dVector2d(verts_table[10], verts_table[11])
+        ]
+        if count_sides > 3:
+            verts.append(verts_table[12])
+            normals.append(verts_table[13])
+            uvs.append(
+                P3dVector2d(verts_table[14], verts_table[15])
+            )
 
         return cls(
             tuple(verts),
@@ -119,21 +149,26 @@ class P3dFace:
             and count_sides == len(self.normals) == len(self.uvs)
         )
         binary.write_ulong(stream, count_sides)
-        for vert, norm, (u, v) in zip(
-            self.vertices,
-            self.normals,
-            self.uvs
-        ):
-            stream.write(_FACE.pack(vert, norm, u, v))
-
-        if count_sides == 4:
-            stream.write(
-                _FACE.pack(
-                    self.vertices[-1],
-                    self.normals[-1],
-                    *self.uvs[-1]
-                )
+        stream.write(
+            _STRUCT_FACE.pack(
+                self.vertices[0],
+                self.normals[0],
+                self.uvs[0].u,
+                self.uvs[0].v,
+                self.vertices[1],
+                self.normals[1],
+                self.uvs[1].u,
+                self.uvs[1].v,
+                self.vertices[2],
+                self.normals[2],
+                self.uvs[2].u,
+                self.uvs[2].v,
+                self.vertices[2] if count_sides == 3 else self.vertices[3],
+                self.normals[2] if count_sides == 3 else self.normals[3],
+                self.uvs[2].u if count_sides == 3 else self.uvs[3].u,
+                self.uvs[2].v if count_sides == 3 else self.uvs[3].v
             )
+        )
 
         binary.write_ulong(stream, self.flags)
         binary.write_asciiz(stream, self.texture)
@@ -155,6 +190,16 @@ class P3dTagg(ABC):
         self,
         stream: IO[bytes]
     ) -> None: ...
+
+    @abstractmethod
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool: ...
 
 
 class P3dUnknownTagg(P3dTagg):
@@ -182,6 +227,16 @@ class P3dUnknownTagg(P3dTagg):
             name,
             stream.read(length)
         )
+
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        return True
 
     def write(
         self,
@@ -219,6 +274,16 @@ class P3dPropertyTagg(P3dTagg):
             binary.read_asciiz_field(stream, 64)
         )
 
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        return len(self._name) < 64 and len(self._value) < 64
+
     def write(
         self,
         stream: IO[bytes]
@@ -249,6 +314,16 @@ class P3dMassTagg(P3dTagg):
         assert binary.read_ulong(stream) == (count_vertices * 4)
         return cls(binary.read_floats(stream, count_vertices))
 
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        return len(self._masses) == count_verts
+
     def write(
         self,
         stream: IO[bytes]
@@ -257,6 +332,245 @@ class P3dMassTagg(P3dTagg):
         binary.write_asciiz(stream, "#Mass#")
         binary.write_ulong(stream, len(self._masses) * 4)
         binary.write_float(stream, *self._masses)
+
+
+class P3dSharpEdgesTagg(P3dTagg):
+    def __init__(self, edges: tuple[P3dEdge, ...]) -> None:
+        self._edges = edges
+
+    @property
+    def edges(self) -> tuple[P3dEdge, ...]:
+        return self._edges
+
+    @classmethod
+    def read(
+        cls,
+        stream: IO[bytes]
+    ) -> Self:
+        assert stream.read(1) == b"\x01"
+        assert binary.read_asciiz(stream) == "#SharpEdges#"
+
+        length = binary.read_ulong(stream)
+        count_values = length // 4
+        data = binary.read_ulongs(stream, count_values)
+        edges = [
+            P3dEdge(data[i], data[i+1])
+            for i in range(0, count_values, 2)
+        ]
+
+        return cls(tuple(edges))
+
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        if not strict:
+            return True
+
+        def valid_idx(idx: int) -> bool:
+            return 0 <= idx < count_verts
+
+        for v1, v2 in self._edges:
+            if not (valid_idx(v1) and valid_idx(v2)):
+                return False
+
+        return True
+
+    def write(
+        self,
+        stream: IO[bytes]
+    ) -> None:
+        stream.write(b"\x01")
+        binary.write_asciiz(stream, "#SharpEdges#")
+        binary.write_ulong(stream, len(self._edges) * 2 * 4)
+        values = [
+            x
+            for edge in self._edges
+            for x in edge
+        ]
+        binary.write_ulong(stream, *values)
+
+
+class P3dUvSetTagg(P3dTagg):
+    def __init__(
+        self,
+        index: int,
+        coordinates: tuple[P3dVector2d, ...]
+    ) -> None:
+        self._index = index
+        self._uvs = coordinates
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @property
+    def coordinates(self) -> tuple[P3dVector2d, ...]:
+        return self._uvs
+
+    @classmethod
+    def read(cls, stream: IO[bytes]) -> Self:
+        assert stream.read(1) == b"\x01"
+        assert binary.read_asciiz(stream) == "#UVSet#"
+
+        length, index = binary.read_ulongs(stream, 2)
+        count_values = (length - 4) // 4
+        data = binary.read_floats(stream, count_values)
+
+        uvs = [
+            P3dVector2d(data[i], data[i+1])
+            for i in range(0, count_values, 2)
+        ]
+
+        return cls(index, tuple(uvs))
+
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        if self._index < 0:
+            return False
+
+        if len(self._uvs) != (count_tris * 3 + count_quads * 4):
+            return False
+
+        return True
+
+    def write(
+        self,
+        stream: IO[bytes]
+    ) -> None:
+        stream.write(b"\x01")
+        binary.write_asciiz(stream, "#UVSet#")
+        binary.write_ulong(
+            stream,
+            len(self._uvs) * 2 * 4,
+            self._index
+        )
+        values = [
+            x
+            for uv in self._uvs
+            for x in uv
+        ]
+        binary.write_float(stream, *values)
+
+
+class P3dSelectionTagg(P3dTagg):
+    def __init__(self, name: str, count_verts: int, count_faces: int) -> None:
+        self._name = name
+        self._weights_verts: dict[int, float] = {}
+        self._weights_faces: dict[int, float] = {}
+        self._count_verts = count_verts
+        self._count_faces = count_faces
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @staticmethod
+    def decode_weight(weight: int) -> float:
+        if weight in (0, 1):
+            return weight
+
+        return (255 - weight) / 254
+
+    @staticmethod
+    def encode_weight(weight: float) -> int:
+        if weight in (0, 1):
+            return int(weight)
+
+        value = round(255 - 254 * weight)
+
+        return value
+
+    @classmethod
+    def read(
+        cls,
+        stream: IO[bytes],
+        count_verts: int,
+        count_faces: int,
+        *,
+        ignore_faces: bool = False
+    ) -> Self:
+        assert stream.read(1) == b"\x01"
+        name = binary.read_asciiz(stream)
+        assert not name.startswith("#") and not name.endswith("#")
+        assert binary.read_ulong(stream) == count_verts + count_faces
+
+        output = cls(name, count_verts, count_faces)
+
+        for i, encoded in enumerate(stream.read(count_verts)):
+            if (w := cls.decode_weight(encoded)) > 0:
+                output._weights_verts[i] = w
+
+        if ignore_faces:
+            stream.seek(count_faces, 1)
+        else:
+            for i, encoded in enumerate(stream.read(count_faces)):
+                if (w := cls.decode_weight(encoded)) > 0:
+                    output._weights_faces[i] = w
+
+        return output
+
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        idx_verts = list(self._weights_verts.keys())
+        idx_faces = list(self._weights_faces.keys())
+
+        if idx_verts:
+            min_vert = min(idx_verts)
+            max_vert = max(idx_verts)
+
+            if not (
+                0 <= min_vert < count_verts
+                and 0 <= max_vert < count_verts
+            ):
+                return False
+
+        if idx_faces:
+            min_face = min(idx_faces)
+            max_face = max(idx_faces)
+
+            if not (
+                0 <= min_face < (count_tris + count_quads)
+                and 0 <= max_face < (count_tris + count_quads)
+            ):
+                return False
+
+        return True
+
+    def write(
+        self,
+        stream: IO[bytes]
+    ) -> None:
+        stream.write(b"\x01")
+        binary.write_asciiz(stream, self._name)
+        binary.write_ulong(stream, self._count_verts + self._count_faces)
+
+        weights_verts = bytearray(self._count_verts)
+        for i, w in self._weights_verts.items():
+            weights_verts[i] = self.encode_weight(w)
+
+        weights_faces = bytearray(self._count_faces)
+        for i, w in self._weights_faces.items():
+            weights_faces[i] = self.encode_weight(w)
+
+        stream.write(weights_verts)
+        stream.write(weights_faces)
 
 
 class P3dEofTagg(P3dTagg):
@@ -273,6 +587,16 @@ class P3dEofTagg(P3dTagg):
 
         return cls()
 
+    def validate(
+        self,
+        count_verts: int,
+        count_tris: int,
+        count_quads: int,
+        *,
+        strict: bool
+    ) -> bool:
+        return True
+
     def write(
         self,
         stream: IO[bytes]
@@ -282,12 +606,17 @@ class P3dEofTagg(P3dTagg):
         binary.write_ulong(stream, 0)
 
 
+def _is_special_tagg(name: str) -> bool:
+    return name.startswith("#") and name.endswith("#")
+
+
 def _read_tagg(
     stream: IO[bytes],
     count_vertices: int,
     count_faces: int,
     *,
-    keep_unknown: bool = False
+    keep_unknown: bool = False,
+    ignore_face_weights: bool = False
 ) -> P3dTagg | None:
     start = stream.tell()
     assert stream.read(1) == b"\x01"
@@ -301,10 +630,21 @@ def _read_tagg(
             return P3dPropertyTagg.read(stream)
         case "#Mass#":
             return P3dMassTagg.read(stream, count_vertices)
-        case _ if keep_unknown:
+        case "#SharpEdges#":
+            return P3dSharpEdgesTagg.read(stream)
+        case "#UVSet#":
+            return P3dUvSetTagg.read(stream)
+        case _ if _is_special_tagg(name) and keep_unknown:
             return P3dUnknownTagg.read(stream)
-        case _:
+        case _ if _is_special_tagg(name):
             return None
+        case _:
+            return P3dSelectionTagg.read(
+                stream,
+                count_vertices,
+                count_faces,
+                ignore_faces=ignore_face_weights
+            )
 
 
 class P3dLod:
@@ -321,7 +661,8 @@ class P3dLod:
         cls,
         stream: IO[bytes],
         *,
-        keep_unknown_taggs: bool = False
+        keep_unknown_taggs: bool = False,
+        ignore_face_weights: bool = False
     ) -> Self:
         if (signature := stream.read(4)) != b"P3DM":
             raise P3dError(
@@ -369,7 +710,8 @@ class P3dLod:
                 stream,
                 count_verts,
                 count_faces,
-                keep_unknown=keep_unknown_taggs
+                keep_unknown=keep_unknown_taggs,
+                ignore_face_weights=ignore_face_weights
             )
             if tagg is None:
                 continue
@@ -381,6 +723,44 @@ class P3dLod:
         output._resolution = binary.read_float(stream)
 
         return output
+
+    def validate(
+        self,
+        *,
+        strict: bool = False
+    ) -> bool:
+        count_verts = len(self._verts)
+        count_normals = len(self._normals)
+
+        def valid_vidx(idx: int) -> bool:
+            return 0 <= idx < count_verts
+
+        def valid_nidx(idx: int) -> bool:
+            return 0 <= idx < count_normals
+
+        count_tris = count_quads = 0
+        for face in self._faces:
+            sides = len(face.vertices)
+            if sides == 3:
+                count_tris += 1
+            elif sides == 4:
+                count_quads += 1
+            else:
+                return False
+
+            for vidx, nidx in zip(face.vertices, face.vertices):
+                if not (valid_vidx(vidx) and valid_nidx(nidx)):
+                    return False
+
+        for tagg in self._taggs:
+            tagg.validate(
+                count_verts,
+                count_tris,
+                count_quads,
+                strict=strict
+            )
+
+        return True
 
 
 class P3dFile:
@@ -398,7 +778,8 @@ class P3dFile:
         stream: IO[bytes],
         *,
         first_lod_only: bool = False,
-        keep_unknown_taggs: bool = False
+        keep_unknown_taggs: bool = False,
+        ignore_face_weights: bool = False
     ) -> Self:
         if (signature := stream.read(4)) != b"MLOD":
             raise P3dError(
@@ -418,7 +799,8 @@ class P3dFile:
         output._lods = [
             P3dLod.read(
                 stream,
-                keep_unknown_taggs=keep_unknown_taggs
+                keep_unknown_taggs=keep_unknown_taggs,
+                ignore_face_weights=ignore_face_weights
             )
             for _ in range(count_lods)
         ]
@@ -431,14 +813,27 @@ class P3dFile:
         filepath: StrOrBytesPath,
         *,
         first_lod_only: bool = False,
-        keep_unknown_taggs: bool = False
+        keep_unknown_taggs: bool = False,
+        ignore_face_weights: bool = False
     ) -> Self:
         with open(filepath, "rb") as file:
             output = cls.read(
                 file,
                 first_lod_only=first_lod_only,
-                keep_unknown_taggs=keep_unknown_taggs
+                keep_unknown_taggs=keep_unknown_taggs,
+                ignore_face_weights=ignore_face_weights
             )
 
         output._source = fspath(filepath)
         return output
+
+    def validate(
+        self,
+        *,
+        strict: bool = False
+    ) -> bool:
+        for lod in self._lods:
+            if not lod.validate(strict=strict):
+                return False
+
+        return True
