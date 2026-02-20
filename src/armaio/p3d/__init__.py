@@ -17,13 +17,15 @@ class P3dError(Exception):
 _STRUCT_VECTOR2D = Struct("<ff")
 _STRUCT_VECTOR3D = Struct("<fff")
 _STRUCT_VERTEX = Struct("<fffI")
-_STRUCT_FACE = Struct("<IIffIIffIIffIIff")
+_STRUCT_FACE = Struct("<IIIffIIffIIffIIffI")
 
 _FACEVERTS: TypeAlias = tuple[
+    int,  # side count
+    int, int, float, float,  # vertex table
     int, int, float, float,
     int, int, float, float,
     int, int, float, float,
-    int, int, float, float
+    int  # face flags
 ]
 
 
@@ -107,37 +109,37 @@ class P3dFace:
 
     @classmethod
     def read(cls, stream: IO[bytes]) -> Self:
-        count_sides = binary.read_ulong(stream)
+        data: _FACEVERTS = _STRUCT_FACE.unpack(stream.read(18 * 4))
+        count_sides = data[0]
         assert 3 <= count_sides <= 4
 
-        verts_table: _FACEVERTS = _STRUCT_FACE.unpack(stream.read(16 * 4))
         verts: list[int] = [
-            verts_table[0],
-            verts_table[4],
-            verts_table[8]
+            data[1],
+            data[5],
+            data[9]
         ]
         normals: list[int] = [
-            verts_table[1],
-            verts_table[5],
-            verts_table[9]
+            data[2],
+            data[6],
+            data[10]
         ]
         uvs: list[P3dVector2d] = [
-            P3dVector2d(verts_table[2], verts_table[3]),
-            P3dVector2d(verts_table[6], verts_table[7]),
-            P3dVector2d(verts_table[10], verts_table[11])
+            P3dVector2d(data[3], data[4]),
+            P3dVector2d(data[7], data[8]),
+            P3dVector2d(data[11], data[12])
         ]
         if count_sides > 3:
-            verts.append(verts_table[12])
-            normals.append(verts_table[13])
+            verts.append(data[13])
+            normals.append(data[14])
             uvs.append(
-                P3dVector2d(verts_table[14], verts_table[15])
+                P3dVector2d(data[15], data[16])
             )
 
         return cls(
             tuple(verts),
             tuple(normals),
             tuple(uvs),
-            binary.read_ulong(stream),
+            data[17],
             binary.read_asciiz(stream),
             binary.read_asciiz(stream)
         )
@@ -148,9 +150,9 @@ class P3dFace:
             3 <= count_sides <= 4
             and count_sides == len(self.normals) == len(self.uvs)
         )
-        binary.write_ulong(stream, count_sides)
         stream.write(
             _STRUCT_FACE.pack(
+                count_sides,
                 self.vertices[0],
                 self.normals[0],
                 self.uvs[0].u,
@@ -166,11 +168,11 @@ class P3dFace:
                 self.vertices[2] if count_sides == 3 else self.vertices[3],
                 self.normals[2] if count_sides == 3 else self.normals[3],
                 self.uvs[2].u if count_sides == 3 else self.uvs[3].u,
-                self.uvs[2].v if count_sides == 3 else self.uvs[3].v
+                self.uvs[2].v if count_sides == 3 else self.uvs[3].v,
+                self.flags
             )
         )
 
-        binary.write_ulong(stream, self.flags)
         binary.write_asciiz(stream, self.texture)
         binary.write_asciiz(stream, self.material)
 
