@@ -1,0 +1,91 @@
+{
+    "$defs": {
+        "config_identifier": {
+            "description": "Identifier name",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_]+$"
+        },
+        "config_external": {
+            "description": "Reference to external class",
+            "type": "object",
+            "properties": {
+                "type": {"const": "external"},
+                "name": {"$ref": "#/$defs/config_identifier"}
+            },
+            "required": ["type", "name"]
+        },
+        "config_delete": {
+            "description": "Member deletion",
+            "type": "object",
+            "properties": {
+                "type": {"const": "delete"},
+                "name": {"$ref": "#/$defs/config_identifier"}
+            },
+            "required": ["type", "name"]
+        },
+        "config_array": {
+            "description": "Array of config values",
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {"type": "number"},
+                    {"type": "string"},
+                    {"type": "boolean"},
+                    {"$ref": "#/$defs/config_array"}
+                ]
+            }
+        },
+        "config_property": {
+            "description": "Named config property",
+            "type": "object",
+            "properties": {
+                "type": {"const": "property"},
+                "name": {"$ref": "#/$defs/config_identifier"},
+                "value": {
+                    "oneOf": [
+                        {"type": "number"},
+                        {"type": "string"},
+                        {"type": "boolean"},
+                        {"$ref": "#/$defs/config_array"}
+                    ]
+                },
+                "extends": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["type", "name", "value"]
+        },
+        "config_class": {
+            "description": "Config class definition",
+            "type": "object",
+            "properties": {
+                "type": {"const": "class"},
+                "name": {"$ref": "#/$defs/config_identifier"},
+                "parent": {
+                    "oneOf": [
+                        {"$ref": "#/$defs/config_identifier"},
+                        {"type": "null"}
+                    ]
+                },
+                "members": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/config_member"}
+                }
+            },
+            "required": ["type", "name"]
+        },
+        "config_member": {
+            "description": "Valid config class members",
+            "oneOf": [
+                {"$ref": "#/$defs/config_class"},
+                {"$ref": "#/$defs/config_external"},
+                {"$ref": "#/$defs/config_delete"},
+                {"$ref": "#/$defs/config_property"}
+            ]
+        }
+    },
+    "title": "Arma 3 config",
+    "description": "JSON representation of an Arma 3 config file",
+    "type": "array",
+    "items": {"$ref": "#/$defs/config_member"}
+}
